@@ -6,6 +6,29 @@ import time
 import RPi.GPIO as GPIO
 #import RPIO as GPIO # drop-in-replacement!
 
+
+
+import gevent
+from geventwebsocket import WebSocketServer, WebSocketApplication, Resource
+
+
+class PlotApplication(WebSocketApplication):
+	def __init__(self, app=None):
+		super(PlotApplication, self).__init__()
+		self.app = app
+
+    def on_open(self):
+		print 'ws opened'
+		time = 0
+		while True:
+         	self.ws.send("0 %s %s\n" % (time, self.app.electricity_consumed)
+			time += 1
+         	gevent.sleep(0.1)
+
+    def on_close(self, reason):
+        print "Connection Closed!!!", reason
+
+
 class PowerMeter(object):
 	"""
 	Count impulses from electricity meter
@@ -21,10 +44,12 @@ class PowerMeter(object):
 	def __init__(self):
 		self.count = 0
 		self.relay_active = False
+		self.electricity_consumed = 0
 
  	# GPIO has fixed callback argument channel
 	def event_callback(self, channel):
 		self.count += 1
+		self.electricity_consumed += energyPerImpulse
 		print 'count: {}'.format(self.count)
 		# ofh = open(self.log_fn, 'a')
 		# ofh.write('{}, {}\n'.format(time.time(), GPIO.input(channel)))
@@ -67,6 +92,19 @@ class PowerMeter(object):
 	def cleanup(self):
 		GPIO.cleanup()
 
+
+def static_wsgi_app(environ, start_response):
+    start_response("200 OK", [("Content-Type", "text/html")])
+    return open("plot_graph.html").readlines()
+
+
+resource = Resource([
+    ('/', static_wsgi_app),
+    ('/data', PlotApplication)
+])
+
 if __name__ == "__main__":
+    server = WebSocketServer(('', 8000), resource, debug=True)
+    server.serve_forever()
 	pm = PowerMeter()
 	pm.run()
