@@ -17,16 +17,16 @@ class PlotApplication(WebSocketApplication):
 		super(PlotApplication, self).__init__()
 		self.app = app
 
-    def on_open(self):
+    	def on_open(self):
 		print 'ws opened'
 		time = 0
 		while True:
-         	self.ws.send("0 %s %s\n" % (time, self.app.electricity_consumed)
+         		self.ws.send("0 %s %s\n" % (time, self.app.electricity_consumed))
 			time += 1
-         	gevent.sleep(0.1)
+         		gevent.sleep(0.1)
 
-    def on_close(self, reason):
-        print "Connection Closed!!!", reason
+   	def on_close(self, reason):
+       		 print "Connection Closed!!!", reason
 
 
 class PowerMeter(object):
@@ -95,7 +95,7 @@ class PowerMeter(object):
 
 def static_wsgi_app(environ, start_response):
     start_response("200 OK", [("Content-Type", "text/html")])
-    return open("plot_graph.html").readlines()
+    return open("assets/plot_graph.html").readlines()
 
 
 resource = Resource([
@@ -106,5 +106,5 @@ resource = Resource([
 if __name__ == "__main__":
     server = WebSocketServer(('', 8000), resource, debug=True)
     server.serve_forever()
-	pm = PowerMeter()
-	pm.run()
+    pm = PowerMeter()
+    pm.run()
