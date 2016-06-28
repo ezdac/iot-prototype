@@ -177,15 +177,16 @@ class PowerMeter(object):
 
 
 	def run(self):
-		ofh = open(self.log_fn, 'a')
+		# ofh = open(self.log_fn, 'a')
 		GPIO.add_event_detect(2, GPIO.RISING, callback=self.event_callback, bouncetime=100)
 
 		while True:
-			time.sleep(100)
-			continue
-		except KeyboardInterrupt:
-			self.cleanup()
-			sys.exit()
+			try:
+				time.sleep(1)
+				continue
+			except KeyboardInterrupt:
+				self.cleanup()
+				sys.exit()
 
 	def cleanup(self):
 		GPIO.cleanup()
