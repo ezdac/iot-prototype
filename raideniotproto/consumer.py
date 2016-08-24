@@ -20,7 +20,8 @@ import gevent
 from geventwebsocket import WebSocketServer, WebSocketApplication, Resource
 
 from raiden.tests.network.utils import start_geth_node
-from raiden.app import App, INITIAL_PORT
+from raiden.app import App as RaidenApp
+from raiden.app import INITIAL_PORT
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import BlockChainService
 
@@ -64,7 +65,7 @@ class PlotApplication(WebSocketApplication):
         print "Connection Closed!!!", reason
 
 
-class PowerVendorBase(object):
+class PowerConsumerBase(object):
     """
     Count impulses from electricity meter
     """
@@ -78,7 +79,7 @@ class PowerVendorBase(object):
         self.asset_address = asset_address
         self.partner_address = vendor_address
 
-    @propert
+    @property
     def electricity_consumed(self):
         return self.consumed_impulses * self.energy_per_impulse
 
@@ -119,19 +120,19 @@ class PowerVendorBase(object):
         geth_app = start_geth_node(private_keys, geth_private_key, p2p_base_port,
                         bootstrap_enode, base_datadir)
         if geth_app:
-            self.geth_started = True
             self.geth_port = 4000 # XXX
             self.geth_private_key = geth_private_key
             self.raiden_private_key = private_keys[1] # XXX check
             self.raiden_port = INITIAL_PORT
+            self.geth_started = True
 
         return 'success' # TODO implement properly, maybe return address etc
 
     @public
     def remote_start_raiden_app(self, registry_address, discovery_address):
 
-        assert geth_started
-        config = App.default_config.copy()
+        assert self.geth_started
+        config = RaidenApp.default_config.copy()
         config['host'] = '0.0.0.0' # XXX NAT-external
         config['port'] = self.raiden_port
         config['privatekey_hex'] = self.raiden_private_key.encode('hex') #XXX encode?
@@ -149,7 +150,7 @@ class PowerVendorBase(object):
         )
         discovery = ContractDiscovery(jsonrpc_client, discovery_address.decode('hex'))  # FIXME: double encoding
 
-        self.app = App(config, blockchain_service, discovery)
+        self.app = RaidenApp(config, blockchain_service, discovery)
         discovery.register(app.raiden.address, 0.0.0.0, self.raiden_port)
 
         self.app.raiden.register_registry(blockchain_service.default_registry)
@@ -168,6 +169,26 @@ class PowerVendorBase(object):
         #     logging
         # )
 
+    @public
+    def set_vendor_details(self, price_per_kwh, vendor_address, asset_address):
+        self.price_per_kwh = price_per_kwh
+        self.vendor_address = vendor_address
+        self.asset_address = asset_address
+        return 'success'
+
+    @public # working?
+    @property
+    def consumer_ready(self):
+        return all(
+                self.price_per_kwh,
+                self.vendor_address,
+                self.asset_address,
+                isinstance(self.app, RaidenApp),
+                self.api,
+                self.geth_started
+        )
+
+    @public
     def event_callback(self, channel):
         """ Gets registered with GPIO, will get executed on every impulse.
         Requires, that raiden/rpc polling isn't blocking and doesn't take longer than the next impulse
@@ -194,6 +215,7 @@ class PowerVendorBase(object):
         pass
 
     def run(self):
+        assert self.consumer_ready
         # ofh = open(self.log_fn, 'a')
         self.setup_event(callback=self.event_callback)
         # blocks until first transfer is received
@@ -207,7 +229,7 @@ class PowerVendorBase(object):
                 sys.exit()
 
 
-class PowerVendorRaspberry(PowerVendorBase):
+class PowerConsumerRaspberry(PowerConsumerBase):
     """
     Sets up the raspberry's GPIOs, registers callback with the impules event
     """
@@ -227,17 +249,28 @@ class PowerVendorRaspberry(PowerVendorBase):
     def cleanup(self):
         GPIO.cleanup()
 
-class PowerVendorDummy(PowerVendorBase):
+class PowerConsumerDummy(PowerConsumerBase):
 
-    def __init__(self, raiden, initial_price, asset_address, partner_address, granted_overhead=None):
-        super(PowerMeterDummy, self)
-        # make accessible via rpc for mock impulse events
-        self.event_callback = public(self.event_callback)
+    def __init__(self):
+        # # wait for rpc call with parameters that set fields, create raiden app and initialise superclass constructor
+        # while not isinstance(RaidenApp, self.app):
+        #     gevent.sleep(1)
+        # self.api = self.raiden.api
+        # while not self.asset_address:
+        #     gevent.sleep(1)
+        # # everything set from super class, don't call super constructor anymore
+        # # super(PowerMeterDummy, self).__init__(raiden, self.price, self.asset_address, self.vendor_address):
+        # # make accessible via rpc for mock impulse events
+        # # self.event_callback = public(self.event_callback) # this shouldnt work like that!
+        # assert self.consumer_ready
+        # self.run()
+        pass
 
     def setup_event(self, callback=None):
         pass
 
     def run(self):
+        assert self.consumer_ready
         # ofh = open(self.log_fn, 'a')
         while True:
             try:
