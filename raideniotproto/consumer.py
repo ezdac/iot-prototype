@@ -1,4 +1,5 @@
-import sys, os, time, atexit from signal import SIGTERM
+import sys, os, time, atexit
+from signal import SIGTERM
 import time
 #import RPIO as GPIO # drop-in-replacement!
 
@@ -19,7 +20,7 @@ from tinyrpc.server.gevent import RPCServerGreenlets
 import gevent
 from geventwebsocket import WebSocketServer, WebSocketApplication, Resource
 
-from raiden.tests.network.utils import start_geth_node
+from raiden.tests.utils.network import start_geth_node
 from raiden.app import App as RaidenApp
 from raiden.app import INITIAL_PORT
 from raiden.network.discovery import ContractDiscovery
@@ -48,21 +49,21 @@ class JSONRPCServer(object):
 
 
 
-class PlotApplication(WebSocketApplication):
-    def __init__(self, app=None):
-        super(PlotApplication, self).__init__()
-        self.app = app
-
-    def on_open(self):
-        print 'ws opened'
-        time = 0
-        while True:
-            self.ws.send("0 %s %s\n" % (time, self.app.))
-            time++
-            gevent.sleep(0.1)
-
-    def on_close(self, reason):
-        print "Connection Closed!!!", reason
+# class PlotApplication(WebSocketApplication):
+#     def __init__(self, app=None):
+#         super(PlotApplication, self).__init__()
+#         self.app = app
+#
+#     def on_open(self):
+#         print 'ws opened'
+#         time = 0
+#         while True:
+#             self.ws.send("0 %s %s\n" % (time, self.app.))
+#             time++
+#             gevent.sleep(0.1)
+#
+#     def on_close(self, reason):
+#         print "Connection Closed!!!", reason
 
 
 class PowerConsumerBase(object):
@@ -151,7 +152,7 @@ class PowerConsumerBase(object):
         discovery = ContractDiscovery(jsonrpc_client, discovery_address.decode('hex'))  # FIXME: double encoding
 
         self.app = RaidenApp(config, blockchain_service, discovery)
-        discovery.register(app.raiden.address, 0.0.0.0, self.raiden_port)
+        discovery.register(app.raiden.address, '0.0.0.0', self.raiden_port)
 
         self.app.raiden.register_registry(blockchain_service.default_registry)
 
@@ -229,25 +230,25 @@ class PowerConsumerBase(object):
                 sys.exit()
 
 
-class PowerConsumerRaspberry(PowerConsumerBase):
-    """
-    Sets up the raspberry's GPIOs, registers callback with the impules event
-    """
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(2, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-    GPIO.setup(17, GPIO.OUT)
-
-    def __init__(self, raiden, initial_price, asset_address, partner_address, granted_overhead=None):
-        import RPi.GPIO as GPIO
-        super(PowerMeterRaspberry, self)
-
-     # GPIO has fixed callback argument channel
-
-    def setup_event(self, callback=None):
-        GPIO.add_event_detect(2, GPIO.RISING, callback=callback, bouncetime=100)
-
-    def cleanup(self):
-        GPIO.cleanup()
+# class PowerConsumerRaspberry(PowerConsumerBase):
+#     """
+#     Sets up the raspberry's GPIOs, registers callback with the impules event
+#     """
+#     GPIO.setmode(GPIO.BCM)
+#     GPIO.setup(2, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+#     GPIO.setup(17, GPIO.OUT)
+#
+#     def __init__(self, raiden, initial_price, asset_address, partner_address, granted_overhead=None):
+#         import RPi.GPIO as GPIO
+#         super(PowerMeterRaspberry, self)
+#
+#      # GPIO has fixed callback argument channel
+#
+#     def setup_event(self, callback=None):
+#         GPIO.add_event_detect(2, GPIO.RISING, callback=callback, bouncetime=100)
+#
+#     def cleanup(self):
+#         GPIO.cleanup()
 
 class PowerConsumerDummy(PowerConsumerBase):
 
@@ -269,6 +270,7 @@ class PowerConsumerDummy(PowerConsumerBase):
     def setup_event(self, callback=None):
         pass
 
+    @public
     def run(self):
         assert self.consumer_ready
         # ofh = open(self.log_fn, 'a')
@@ -284,15 +286,15 @@ class PowerConsumerDummy(PowerConsumerBase):
                 sys.exit()
 
 
-def static_wsgi_app(environ, start_response):
-    start_response("200 OK", [("Content-Type", "text/html")])
-    return open("plot_graph.html").readlines()
-
-
-resource = Resource([
-    ('/', static_wsgi_app),
-    ('/data', PlotApplication)
-])
+# def static_wsgi_app(environ, start_response):
+#     start_response("200 OK", [("Content-Type", "text/html")])
+#     return open("plot_graph.html").readlines()
+#
+#
+# resource = Resource([
+#     ('/', static_wsgi_app),
+#     ('/data', PlotApplication)
+# ])
 
 if __name__ == "__main__":
     # server = WebSocketServer(('', 8000), resource, debug=True)
