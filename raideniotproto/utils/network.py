@@ -32,28 +32,26 @@ from raiden.tests.utils.network import (
 
 def deploy_default_config():
     path = os.path.join(os.getcwd(), 'tmpgeth')
-    geth_processes, private_keys, cluster_private_keys = genesis_geth_node(path)
-    assert len(geth_processes) == 1
-    resource_dict = {'geth_processes': geth_processes,
-            'private_keys': private_keys,
-            'geth_private_keys': cluster_private_keys}
+    resource_dict = genesis_geth_node(path)
+    assert len(resource_dict['geth_processes']) == 1
     # XXX syncing problem? shouldn't it be:
     #   1) boostrap local blockchain (miner thread!)
     #   2) sync remote geth (non miner?)
     #   3) deploy contracts, initialise local raiden app
     #   4) initialise remote raiden app with registry, discovery, privkey from 3)
+    private_keys = resource_dict['private_keys']
     resource_dict.update(deploy_network(private_keys))
     return resource_dict
 
 
 def genesis_geth_node(tmpdir,
-                        cluster_number_of_nodes=1,
+                        cluster_number_of_nodes=2,
                         cluster_key_seed='cluster:{}',
                         number_of_nodes=2,
                         privatekey_seed='key:{}',
                         p2p_base_port=29870,
                         ):
-    cluster_private_keys = [
+    cluster_unassigned_private_keys = [
         sha3(cluster_key_seed.format(position))
         for position in range(cluster_number_of_nodes)
     ]
@@ -63,14 +61,18 @@ def genesis_geth_node(tmpdir,
         for position in range(number_of_nodes)
     ]
 
+    cluster_private_keys = [cluster_unassigned_private_keys.pop(1)]
+
     geth_processes = create_geth_cluster(
         private_keys,
         cluster_private_keys,
         p2p_base_port,
         str(tmpdir),
     )
-    print geth_processes, private_keys, cluster_private_keys
-    return geth_processes, private_keys, cluster_private_keys
+    return {'geth_processes': geth_processes,
+            'private_keys': private_keys,
+            'geth_private_keys': cluster_private_keys,
+            'geth_unassigned_private_keys': cluster_unassigned_private_keys}
 
 def deploy_network(private_keys, channels_per_node=1, deposit=DEFAULT_DEPOSIT,
                      number_of_assets=1, settle_timeout=DEFAULT_SETTLE_TIMEOUT,
@@ -91,7 +93,7 @@ def deploy_network(private_keys, channels_per_node=1, deposit=DEFAULT_DEPOSIT,
         host='0.0.0.0',
         # port=4000, #XXX modified
         privkey=privatekey,
-        print_communication=False, #XXX modified
+        print_communication=True, #XXX modified
     )
     patch_send_transaction(jsonrpc_client)
 

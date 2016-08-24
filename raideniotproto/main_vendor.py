@@ -17,6 +17,7 @@ def main(consumer_host, consumer_port):
     host = ni.ifaddresses(DEFAULT_INTERFACE_NAME)[2][0]['addr']
 
     deployed_network = deploy_default_config()
+    print deployed_network
     geth_private_keys = deployed_network['geth_private_keys'] # XXX make shure first one is bootstrap
     bootstrap_enode = 'enode://{pub}@{host}:{port}'.format(
         pub=privtoaddr(geth_private_keys[0]),
@@ -24,13 +25,14 @@ def main(consumer_host, consumer_port):
         port=29870 #XXX check
     )
     private_keys = deployed_network['private_keys']
+    geth_remote_private_key= deployed_network['geth_unassigned_private_keys'].pop()
     consumer_proxy = ConsumerProxy(consumer_host, consumer_port).rpc_proxy
     consumer_proxy.remote_start_geth_node(
         private_keys=private_keys,
-        geth_private_key=geth_private_keys[1],
+        geth_private_key=geth_remote_private_key,
         p2p_base_port=29870,
         bootstrap_enode=bootstrap_enode)
-
+    deployed_network['geth_private_keys'].append(geth_remote_private_key)
 
     registry_address = deployed_network['registry_address']
     discovery_address = deployed_network['discovery_address']
