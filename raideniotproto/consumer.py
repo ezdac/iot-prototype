@@ -44,8 +44,16 @@ class JSONRPCServer(object):
             )
 
     def start(self):
-        method_names = [k[0].__name__ for k in inspect.getmembers(instance, inspect.ismethod)]
+        method_names = [k[0].__name__ for k in inspect.getmembers(self.app, inspect.ismethod)]
         print [self.dispatcher.get_method(name) for name in method_names]
+        registered = []
+        for name in method_names:
+            try:
+                is_registered = bool(self.dispatcher.get_method(name))
+            except KeyError:
+                is_registered = False
+            registered.append((name, is_registered))
+        print 'Public methods: ', registered
         gevent.spawn(self.wsgi_server.serve_forever)
         self.rpc_server.serve_forever()
 
