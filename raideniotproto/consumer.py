@@ -46,7 +46,7 @@ class JSONRPCServer(object):
     def start(self):
         method_names = [k[0] for k in inspect.getmembers(self.app, inspect.ismethod)]
 	has_attribute = [k[1] for k in inspect.getmembers(self.app, inspect.ismethod) if '_rpc_public_name' in k[1].__dict__]
-	print has_attribute 
+	print has_attribute
         registered = []
         for name in method_names:
             try:
@@ -128,7 +128,7 @@ class PowerConsumerBase(object):
      # GPIO has fixed callback argument channel
 
     @public
-    def remote_start_geth_node(private_keys, geth_private_key, p2p_base_port,
+    def remote_start_geth_node(self, private_keys, geth_private_key, p2p_base_port,
                     bootstrap_enode):
         base_datadir = os.path.join(os.pwd + 'tmpdir') # XXX check!
         geth_app = start_geth_node(private_keys, geth_private_key, p2p_base_port,

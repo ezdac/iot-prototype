@@ -30,11 +30,11 @@ def main(consumer_host, consumer_port):
     consumer_proxy = ConsumerProxy(consumer_host, consumer_port).rpc_proxy
     print consumer_proxy.__dict__
     consumer_proxy.remote_start_geth_node(
-        private_keys=[key.encode('hex') for key in private_keys],
+        [key.encode('hex') for key in private_keys],
         # geth_private_key=geth_remote_private_key,
-        geth_private_key=deployed_network['geth_private_keys'][0].encode('hex'),
-        p2p_base_port=29870,
-        bootstrap_enode=bootstrap_enode)
+        deployed_network['geth_private_keys'][0].encode('hex'),
+        29870,
+        bootstrap_enode)
     deployed_network['geth_private_keys'].append(geth_remote_private_key)
 
     registry_address = deployed_network['registry_address']
