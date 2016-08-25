@@ -2,6 +2,7 @@ import sys, os, time, atexit
 from signal import SIGTERM
 import time
 #import RPIO as GPIO # drop-in-replacement!
+import inspect
 
 import gevent.wsgi
 import gevent.queue
@@ -9,9 +10,8 @@ import gevent.queue
 import gevent.wsgi
 import gevent.queue
 
-from tinyrpc.dispatch import public
 from tinyrpc.server import RPCServer
-from tinyrpc.dispatch import RPCDispatcher
+from tinyrpc.dispatch import RPCDispatcher, public
 from tinyrpc.protocols.jsonrpc import JSONRPCProtocol
 from tinyrpc.transports.wsgi import WsgiServerTransport
 from tinyrpc.server.gevent import RPCServerGreenlets
@@ -44,6 +44,8 @@ class JSONRPCServer(object):
             )
 
     def start(self):
+        method_names = [k[0].__name__ for k in inspect.getmembers(instance, inspect.ismethod)]
+        print [self.dispatcher.get_method(name) for name in method_names]
         gevent.spawn(self.wsgi_server.serve_forever)
         self.rpc_server.serve_forever()
 

@@ -9,7 +9,7 @@ def main():
     app = PowerConsumerDummy()
     ni.ifaddresses(DEFAULT_INTERFACE_NAME)
     host = ni.ifaddresses(DEFAULT_INTERFACE_NAME)[2][0]['addr']
-    print host
+    print 'RPC-address:', host, RPCPort
     rpc_server = JSONRPCServer(app, '127.0.0.1', RPCPort)
     rpc_server.start()
     # while not app.consumer_ready:
