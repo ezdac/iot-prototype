@@ -16,7 +16,7 @@ from raiden.tests.conftest import deployed_network
 
 class ConsumerProxy(object):
 
-    def __init__(self, host, port, protocol=JSONRPCProtocol, prefix='consumer'):
+    def __init__(self, host, port, protocol=JSONRPCProtocol, prefix=''):
         """
         a ConsumerProxy instance can call registered methods like that:
         ConsumerProxyInstance,rpc_proxy.<method>(*args)
@@ -24,7 +24,7 @@ class ConsumerProxy(object):
 
         rpc_client = RPCClient(
             protocol(),
-            HttpPostClientTransport('{}:{}'.format(host, port))
+            HttpPostClientTransport('http://{}:{}'.format(host, port))
         )
         self.rpc_proxy = RPCProxy(rpc_client, prefix=prefix, one_way=False)
 

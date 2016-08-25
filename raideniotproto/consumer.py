@@ -130,9 +130,10 @@ class PowerConsumerBase(object):
     @public
     def remote_start_geth_node(self, private_keys, geth_private_key, p2p_base_port,
                     bootstrap_enode):
-        base_datadir = os.path.join(os.pwd + 'tmpdir') # XXX check!
+        base_datadir = os.path.join(os.getcwd, 'tmpdir') # XXX check!
+        path = os.path.realpath(base_datadir)
         geth_app = start_geth_node(private_keys, geth_private_key, p2p_base_port,
-                        bootstrap_enode, base_datadir)
+                        bootstrap_enode, path)
         if geth_app:
             self.geth_port = 4000 # XXX
             self.geth_private_key = geth_private_key
