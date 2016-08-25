@@ -36,7 +36,7 @@ class JSONRPCServer(object):
         self.wsgi_server = gevent.wsgi.WSGIServer((host, port), self.transport.handle)
 
         # call e.g. 'raiden.api.transfer' via JSON RPC
-        self.dispatcher.register_instance(self.app, 'consumer.')
+        self.dispatcher.register_instance(self.app)
         self.rpc_server = RPCServerGreenlets(
             self.transport,
             JSONRPCProtocol(),
@@ -44,15 +44,18 @@ class JSONRPCServer(object):
             )
 
     def start(self):
-        method_names = [k[0].__name__ for k in inspect.getmembers(self.app, inspect.ismethod)]
-        print [self.dispatcher.get_method(name) for name in method_names]
+        method_names = [k[0] for k in inspect.getmembers(self.app, inspect.ismethod)]
+	has_attribute = [k[1] for k in inspect.getmembers(self.app, inspect.ismethod) if '_rpc_public_name' in k[1].__dict__]
+	print has_attribute 
         registered = []
         for name in method_names:
             try:
-                is_registered = bool(self.dispatcher.get_method(name))
+                is_registered = self.dispatcher.get_method(name)
             except KeyError:
                 is_registered = False
-            registered.append((name, is_registered))
+		pass
+            finally:
+		registered.append((name, is_registered))
         print 'Public methods: ', registered
         gevent.spawn(self.wsgi_server.serve_forever)
         self.rpc_server.serve_forever()
