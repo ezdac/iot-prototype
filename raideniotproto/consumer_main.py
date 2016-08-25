@@ -1,5 +1,5 @@
 from consumer import PowerConsumerDummy, JSONRPCServer
-import netinterfaces as ni
+import netifaces as ni
 import gevent
 
 DEFAULT_INTERFACE_NAME = 'eth0'
