@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Raiden Electricity Demo</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/foundation/6.2.3/foundation.min.css">
+    <style>
+        p + .stat {
+            margin-top: -.4rem;
+        }
+        .progress {
+            height: 2rem;
+            position: relative;
+        }
+        .progress-meter-text {
+            font-size: 1.5rem;
+        }
+
+        .log {
+            font-size: 1.3rem;
+        }
+        .log.seller .fa {
+            color: #40aa40;
+        }
+        .log.buyer .fa {
+            color: #aa4040;
+        }
+    </style>
+</head>
+<body>
+    <div class="row" id="main">
+        {% include "inner.html" %}
+    </div>
+    <script>
+        var reload = function () {
+            var req = new XMLHttpRequest();
+            req.addEventListener("load", function () {
+                document.getElementById('main').innerHTML = this.responseText;
+            });
+            req.open("GET", location.href);
+            req.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+            req.send();
+        };
+        (function(){
+            window.setInterval(reload, 1000);
+        })();
+    </script>
+</body>
+</html>

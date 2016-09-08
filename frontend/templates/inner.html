@@ -1,0 +1,69 @@
+        <div class="columns large-12">
+            <h1>Raiden IOT electricity demo</h1>
+            {% if kind == 'seller' %}
+                <h2 class="subheader">{{ kind.title() }}</h2>
+                <p class="lead">
+                    The seller provides electricity to the buyer in exchange for tokens. <br>
+                    The electricity is switched on by the seller as long as the buyer has provided enough credit.
+                </p>
+                <div class="row">
+                    <div class="columns medium-2">
+                        <p>Power state</p>
+                        <div class="switch">
+                          <input class="switch-input" id="exampleRadioSwitch1" type="radio" {% if credit > 0 %}checked{% endif %} name="testGroup">
+                          <label class="switch-paddle" for="exampleRadioSwitch1">
+                            <span class="show-for-sr">Bulbasaur</span>
+                          </label>
+                        </div>
+                    </div>
+                    <div class="columns medium-3">
+                        <p>Power provided</p>
+                        <div class="stat">{{ power }} Wh</div>
+                    </div>
+                    <div class="columns medium-7">
+                        <p>Buyer credit</p>
+                        <div class="progress" role="progressbar" tabindex="0">
+                            <span class="progress-meter" style="width: {{ credit / (max_balance / 2) * 100 }}%">
+                            </span>
+                            <p class="progress-meter-text">{{ credit }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="columns medium-7 medium-offset-5">
+                        <p>Tokens earned</p>
+                        <div class="progress" role="progressbar" tabindex="0">
+                            <span class="progress-meter" style="width: {{ balance / max_balance * 100 }}%">
+                            </span>
+                            <p class="progress-meter-text">{{ balance }}</p>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <h2 class="subheader">{{ kind.title() }}</h2>
+                <p class="lead">
+                    The buyer receives electricity from the seller in exchange for tokens.
+                </p>
+                <div class="row">
+                    <div class="columns medium-3">
+                        <p>Power used</p>
+                        <div class="stat">{{ power }} Wh</div>
+                    </div>
+                    <div class="columns medium-9">
+                        <p>Tokens left</p>
+                        <div class="progress" role="progressbar" tabindex="0">
+                            <span class="progress-meter" style="width: {{ balance / max_balance * 100 }}%">
+                            </span>
+                            <p class="progress-meter-text">{{ balance }}</p>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+            <br>
+            <h3>Transaction log</h3>
+            <ul class="no-bullet log {{ kind }}">
+                {% for entry in log[-10:] %}
+                    <li>{{ entry.date.strftime("%Y-%m-%d %H:%M:%S") }}: <i class="fa {{ "fa-minus-circle" if kind == 'buyer' else 'fa-plus-circle' }}"></i> {{ 'Received' if kind == 'seller' else 'Sent' }} {{ entry.amount }} tokens</li>
+                {% endfor %}
+            </ul>
+        </div>
