@@ -54,13 +54,13 @@ def main_new(config_dir):
     #TODO: open channel, on consumer: deposit asset
     channel = app.raiden.api.open(token_address, partner)
     app.raiden.api.deposit(token_address, partner, amount=DEFAULT_DEPOSIT_AMOUNT)
-    channel.address 
+    channel.address
 
 
 
 
 if __name__ == '__main__':
-    main()
+    main_new()
 
     # For raspberry:
     # sudo apt-get install build-essential automake pkg-config libtool libffi-dev libgmp-dev libssl-dev

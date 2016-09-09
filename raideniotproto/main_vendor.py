@@ -115,4 +115,4 @@ def main_new(config_dir):
 if __name__ == '__main__':
     #config_dir = sys.argv[1:]
     config_dir =os.environ['CONFIG_DIR']
-    main_new(str(config_dir))
+    main_new()

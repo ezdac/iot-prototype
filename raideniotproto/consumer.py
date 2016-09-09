@@ -132,6 +132,9 @@ class PowerConsumerBase(object):
                     bootstrap_enode):
         base_datadir = os.path.join(os.getcwd, 'tmpdir') # XXX check!
         path = os.path.realpath(base_datadir)
+        private_keys = [key.decode('hex') for key in private_keys]
+        geth_private_key = geth_private_key.decode('hex')
+
         geth_app = start_geth_node(private_keys, geth_private_key, p2p_base_port,
                         bootstrap_enode, path)
         if geth_app:
