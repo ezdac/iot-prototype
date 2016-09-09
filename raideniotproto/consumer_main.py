@@ -2,6 +2,12 @@ from consumer import PowerConsumerDummy, JSONRPCServer
 import netifaces as ni
 import gevent
 
+from raiden.raiden_service import RaidenService, DEFAULT_REVEAL_TIMEOUT, DEFAULT_SETTLE_TIMEOUT
+from raiden.network.discovery import ContractDiscovery
+from raiden.network.transport import UDPTransport
+from raiden.network.rpc.client import BlockChainService
+from raiden.app import App
+
 DEFAULT_INTERFACE_NAME = 'eth0'
 RPCPort = 4040
 
@@ -41,7 +47,7 @@ def main_new(config_dir):
     discovery_contract_address = 'ed8d61f42dc1e56ae992d333a4992c3796b22a74'
     token_address = "ae519fc2ba8e6ffe6473195c092bf1bae986ff90"
 
-    app = app(privatekey, DEFAULT_ETH_RPC_ENDPOINT, registry_contract_address,
+    app = make_app(privatekey, DEFAULT_ETH_RPC_ENDPOINT, registry_contract_address,
         discovery_contract_address)
     # register token once
     # register adress - endpoint
@@ -54,9 +60,63 @@ def main_new(config_dir):
     #TODO: open channel, on consumer: deposit asset
     channel = app.raiden.api.open(token_address, partner)
     app.raiden.api.deposit(token_address, partner, amount=DEFAULT_DEPOSIT_AMOUNT)
-    channel.address
+    print channel.address
 
 
+def make_app(privatekey, eth_rpc_endpoint, registry_contract_address,
+        discovery_contract_address):
+
+    slogging.configure(logging, log_file=logfile)
+
+    if not external_listen_address:
+        # notify('if you are behind a NAT, you should set
+        # `external_listen_address` and configure port forwarding on your router')
+        external_listen_address = listen_address
+
+    # config_file = args.config_file
+    (listen_host, listen_port) = split_endpoint(listen_address)
+
+    config = App.default_config.copy()
+    config['host'] = listen_host
+    config['port'] = listen_port
+    config['privatekey_hex'] = privatekey
+
+    endpoint = eth_rpc_endpoint
+
+    if eth_rpc_endpoint.startswith("http://"):
+        endpoint = eth_rpc_endpoint[len("http://"):]
+        rpc_port = 80
+    elif eth_rpc_endpoint.startswith("https://"):
+        endpoint = eth_rpc_endpoint[len("https://"):]
+        rpc_port = 443
+
+    if ':' not in endpoint:  # no port was given in url
+        rpc_host = endpoint
+    else:
+        rpc_host, rpc_port = split_endpoint(endpoint)
+
+    blockchain_service = BlockChainService(
+        decode_hex(privatekey),
+        decode_hex(registry_contract_address),
+        host=rpc_host,
+        port=rpc_port,
+    )
+
+    discovery = ContractDiscovery(
+        blockchain_service,
+        decode_hex(discovery_contract_address)  # FIXME: double encoding
+    )
+
+    app = App(config, blockchain_service, discovery)
+
+    discovery.register(
+        app.raiden.address,
+        *split_endpoint(external_listen_address)
+    )
+
+    app.raiden.register_registry(blockchain_service.default_registry)
+
+    return app
 
 
 if __name__ == '__main__':
