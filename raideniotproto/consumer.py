@@ -20,7 +20,7 @@ from tinyrpc.server.gevent import RPCServerGreenlets
 import gevent
 from geventwebsocket import WebSocketServer, WebSocketApplication, Resource
 
-from raiden.tests.utils.network import start_geth_node
+#from raiden.tests.utils.network import start_geth_node
 from raiden.app import App as RaidenApp
 from raiden.app import INITIAL_PORT
 from raiden.network.discovery import ContractDiscovery
