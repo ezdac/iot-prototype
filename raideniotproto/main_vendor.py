@@ -1,15 +1,20 @@
 import sys
+import os
+import json
+import time
+import copy
+from raiden.app import app
 # import os
 # sys.path.append(os.path(os.getcwd))
 # print sys.path
 # print __name__
-from vendor_nondaemon import PowerMeterDummy, ConsumerProxy
-# import vendor_nondaemon
-from utils.network import deploy_default_config
-import netifaces as ni
-from raiden.utils import privtoaddr
-
-DEFAULT_INTERFACE_NAME = 'wlp3s0'
+from vendor_nondaemon import PowerMeterRaspberry
+# # import vendor_nondaem
+# from utils.network import deploy_default_config
+# import netifaces as ni
+# from raiden.utils import privtoaddr
+#
+# DEFAULT_INTERFACE_NAME = 'wlp3s0'
 
 def main(consumer_host, consumer_port):
 
@@ -28,36 +33,86 @@ def main(consumer_host, consumer_port):
     private_keys = deployed_network['private_keys']
     geth_remote_private_key= deployed_network['geth_unassigned_private_keys'].pop()
     consumer_proxy = ConsumerProxy(consumer_host, consumer_port).rpc_proxy
-    print consumer_proxy.__dict__
+    private_keys_encoded = [key.encode('hex') for key in private_keys]
+    geth_remote_private_key_encoded = geth_remote_private_key.encode('hex')
+    print private_keys_encoded
+    time.sleep(10000)
     consumer_proxy.remote_start_geth_node(
-        [key.encode('hex') for key in private_keys],
-        # geth_private_key=geth_remote_private_key,
-        deployed_network['geth_private_keys'][0].encode('hex'),
-        29870,
+        private_keys_encoded,
+        geth_remote_private_key_encoded,
+        '29870',
         bootstrap_enode)
+    # consumer_proxy.remote_start_geth_node(
+    #     ['1','2'],
+    #     '1',
+    #     29870,
+    #     '1')
     deployed_network['geth_private_keys'].append(geth_remote_private_key)
 
-    registry_address = deployed_network['registry_address']
-    discovery_address = deployed_network['discovery_address']
-    asset_address = deployed_network['asset_address']
+    registry_address = deployed_network['registry_address'].encode('hex')
+    discovery_address = deployed_network['discovery_address'].encode('hex')
+    asset_address = deployed_network['asset_address'].encode('hex')
+
+    time.sleep(10000)
 
     consumer_proxy.remote_start_raiden_app(
-        discovery=discovery_address,
-        registry=registry_address
+        discovery_address,
+        registry_address
     )
 
     #TODO: get addresses
     pm = PowerMeterDummy(raiden=deploy_network['raiden_apps'][0], # XXX check for correct app
         consumer_proxy=consumer_proxy,
         initial_price=4000,
-        asset_address=asset_address,
+        asset_address=asset_address.decode('hex'),
         partner_address=privtoaddr(private_keys[1]) #XXX check
     )
 
     pm.run()
 
+DEFAULT_ETH_RPC_ENDPOINT = '192.168.0.77:8545'
+
+
+def main_new(config_dir):
+    # files = ['raiden_accounts.json', 'scenario.json', 'genesis.json']
+    # dicts = dict()
+    # for file in files:
+    #     name = copy.deepcopy(file)
+    #     file = os.path.join(os.path.abspath(config_dir), file)
+    #     with open(file, 'r') as f:
+    #         dump = json.load(f)
+    #         dicts[name] = dump
+    #
+    # # --rpc_endpoint "192.168.0.77:8545"
+    # flags = dicts['genesis.json']['config']['raidenFlags'].split('--')
+    # print flags
+    # print dicts['raiden_accounts.json']
+
+    privatekey = 'c85e103f2b2de251d9af35feb3e9979a8a9109f4bf66d087b200d2ab43d933df'
+    registry_contract_address = '4fb87c52b194f78cd4896e3e574028fedbab9'
+    discovery_contract_address = 'ed8d61f42dc1e56ae992d333a4992c3796b22a74'
+    token_address = "ae519fc2ba8e6ffe6473195c092bf1bae986ff90"
+
+    app = app(privatekey, DEFAULT_ETH_RPC_ENDPOINT, registry_contract_address,
+        discovery_contract_address)
+    # register token once
+    app.raiden.chain.default_registry.add_asset(token_address)
+    # register adress - endpoint
+    app.discovery.register(app.raiden.address, '192.168.0.118', '40001')
+    # wait for receiving address:
+    partner = None
+    while not partner:
+        partner = app.discovery.nodeid_by_host_port(('192.168.0.139', '40001'))
+        gevent.sleep(1)
+
+    powermeter = PowerMeterRaspberry(app.raiden, initial_price=1, token_address, partner)
+    powermete.run()
+
+
+
 
 
 if __name__ == '__main__':
-    consumer_host, consumer_port = sys.argv[1:]
-    main(consumer_host, consumer_port)
+    #config_dir = sys.argv[1:]
+    config_dir =os.environ['CONFIG_DIR']
+    main_new(str(config_dir))

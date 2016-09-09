@@ -56,6 +56,8 @@ class PowerMeterBase(object):
     energy_per_impulse = 1/2000. #kwH
 
     def __init__(self, raiden, initial_price, asset_address, partner_address, granted_overhead=None):
+        self.raiden = raiden
+        self.channel = ???
         self.api = raiden.api
         self.relay_active = False
         self.consumed_impulses = 1 # overhead that has to be prepaid
@@ -75,11 +77,8 @@ class PowerMeterBase(object):
     @property
     def credit(self):
         # XXX: timeout?, or deactivate relay when funding is not accessible/takes too long
-        funding = self.api.get_channel_detail(self.asset_address, self.partner_address)
-        balance = funding['our_balance']
-        return balance
-        # if timeout:
-        #     return 0
+        return self.channel.balance
+
 
     @property
     def netted_balance(self):
@@ -145,34 +144,34 @@ class PowerMeterBase(object):
                 sys.exit()
 
 
-# class PowerMeterRaspberry(PowerMeterBase):
-#     """
-#     Sets up the raspberry's GPIOs, registers callback with the impules event
-#     """
-#     GPIO.setmode(GPIO.BCM)
-#     GPIO.setup(2, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-#     GPIO.setup(17, GPIO.OUT)
-#
-#     def __init__(self, raiden, initial_price, asset_address, partner_address, granted_overhead=None):
-#         import RPi.GPIO as GPIO
-#         super(PowerMeterRaspberry, self).__init__(self, raiden, initial_price,
-#               asset_address, partner_address, granted_overhead=None)
-#
-#      # GPIO has fixed callback argument channel
-#
-#     def activate_relay(self):
-#         GPIO.output(17, True)
-#         self.relay_active = True
-#
-#     def deactivate_relay(self):
-#         GPIO.output(17, False)
-#         self.relay_active = False
-#
-#     def setup_event(self, callback=None):
-#         GPIO.add_event_detect(2, GPIO.RISING, callback=callback, bouncetime=100)
-#
-#     def cleanup(self):
-#         GPIO.cleanup()
+class PowerMeterRaspberry(PowerMeterBase):
+    """
+    Sets up the raspberry's GPIOs, registers callback with the impules event
+    """
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(2, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+    GPIO.setup(17, GPIO.OUT)
+
+    def __init__(self, raiden, initial_price, asset_address, partner_address, granted_overhead=None):
+        import RPi.GPIO as GPIO
+        super(PowerMeterRaspberry, self).__init__(self, raiden, initial_price,
+              asset_address, partner_address, granted_overhead=None)
+
+     # GPIO has fixed callback argument channel
+
+    def activate_relay(self):
+        GPIO.output(17, True)
+        self.relay_active = True
+
+    def deactivate_relay(self):
+        GPIO.output(17, False)
+        self.relay_active = False
+
+    def setup_event(self, callback=None):
+        GPIO.add_event_detect(2, GPIO.RISING, callback=callback, bouncetime=100)
+
+    def cleanup(self):
+        GPIO.cleanup()
 
 class PowerMeterDummy(PowerMeterBase):
 
