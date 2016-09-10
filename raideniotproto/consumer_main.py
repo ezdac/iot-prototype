@@ -10,6 +10,8 @@ from raiden.network.rpc.client import BlockChainService
 from raiden.app import App
 from raiden.utils import pex, split_endpoint
 
+from consumer import PowerConsumerRaspberry
+
 DEFAULT_INTERFACE_NAME = 'eth0'
 RPCPort = 4040
 
@@ -64,6 +66,9 @@ def main_new():
     print channel.address.encode('hex')
     app.raiden.api.deposit(token_address, partner, amount=DEFAULT_DEPOSIT_AMOUNT)
     print 'deposited', DEFAULT_DEPOSIT_AMOUNT
+    powerconsumer = PowerConsumerRaspberry(app.raiden, 1, token_address, partner)
+    powerconsumer.run()
+
 
 def make_app(privatekey, eth_rpc_endpoint, registry_contract_address,
         discovery_contract_address,listen_address,external_listen_address):

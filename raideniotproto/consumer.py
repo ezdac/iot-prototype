@@ -87,7 +87,10 @@ class PowerConsumerBase(object):
     energy_per_impulse = 1/2000. #kW
 
     def __init__(self, raiden, price, asset_address, vendor_address):
+        self.raiden = raiden
         self.api = raiden.api
+        asset_manager=raiden.get_manager_by_asset_address(decode_hex(asset_address))
+        self.channel = asset_manager.get_channel_by_partner_address(decode_hex(vendor_address))
         self.consumed_impulses = 1 # overhead that has to be prepaid
         self.price_per_kwh = float(price)
         self.asset_address = asset_address
@@ -103,12 +106,7 @@ class PowerConsumerBase(object):
 
     @property
     def credit(self):
-        # TODO: timeout, or deactivate relay when funding is not accessible/takes too long
-        funding = self.api.get_channel_detail(self.asset_address, self.partner_address)
-        balance = funding['partner_balance']
-        return balance
-        # if timeout:
-        #     return 0
+        return self.channel.balance
 
     @property
     def netted_balance(self):
@@ -127,84 +125,7 @@ class PowerConsumerBase(object):
 
      # GPIO has fixed callback argument channel
 
-    @public
-    def remote_start_geth_node(self, private_keys, geth_private_key, p2p_base_port,
-                    bootstrap_enode):
-        base_datadir = os.path.join(os.getcwd, 'tmpdir') # XXX check!
-        path = os.path.realpath(base_datadir)
-        private_keys = [key.decode('hex') for key in private_keys]
-        geth_private_key = geth_private_key.decode('hex')
 
-        geth_app = start_geth_node(private_keys, geth_private_key, p2p_base_port,
-                        bootstrap_enode, path)
-        if geth_app:
-            self.geth_port = 4000 # XXX
-            self.geth_private_key = geth_private_key
-            self.raiden_private_key = private_keys[1] # XXX check
-            self.raiden_port = INITIAL_PORT
-            self.geth_started = True
-
-        return 'success' # TODO implement properly, maybe return address etc
-
-    @public
-    def remote_start_raiden_app(self, registry_address, discovery_address):
-
-        assert self.geth_started
-        config = RaidenApp.default_config.copy()
-        config['host'] = '0.0.0.0' # XXX NAT-external
-        config['port'] = self.raiden_port
-        config['privatekey_hex'] = self.raiden_private_key.encode('hex') #XXX encode?
-
-        jsonrpc_client = JSONRPCClient(
-            privkey=self.geth_private_key,
-            host='127.0.0.1',
-            port=self.geth_port,
-            print_communication=False,
-        )
-
-        blockchain_service = BlockChainService(
-            jsonrpc_client,
-            registry_address.decode('hex'),
-        )
-        discovery = ContractDiscovery(jsonrpc_client, discovery_address.decode('hex'))  # FIXME: double encoding
-
-        self.app = RaidenApp(config, blockchain_service, discovery)
-        discovery.register(app.raiden.address, '0.0.0.0', self.raiden_port)
-
-        self.app.raiden.register_registry(blockchain_service.default_registry)
-
-        assert app
-
-        return 'success'
-        # XXX Discovery ????
-        # self.app = App()
-        # self.app.raiden = make_raiden_app(privatekey,
-        #     eth_rpc_endpoint,
-        #     registry_contract_address,
-        #     discovery_contract_address=,
-        #     listen_address,
-        #     external_listen_address,
-        #     logging
-        # )
-
-    @public
-    def set_vendor_details(self, price_per_kwh, vendor_address, asset_address):
-        self.price_per_kwh = price_per_kwh
-        self.vendor_address = vendor_address
-        self.asset_address = asset_address
-        return 'success'
-
-    @public # working?
-    @property
-    def consumer_ready(self):
-        return all(
-                self.price_per_kwh,
-                self.vendor_address,
-                self.asset_address,
-                isinstance(self.app, RaidenApp),
-                self.api,
-                self.geth_started
-        )
 
     @public
     def event_callback(self, channel):
@@ -247,25 +168,25 @@ class PowerConsumerBase(object):
                 sys.exit()
 
 
-# class PowerConsumerRaspberry(PowerConsumerBase):
-#     """
-#     Sets up the raspberry's GPIOs, registers callback with the impules event
-#     """
-#     GPIO.setmode(GPIO.BCM)
-#     GPIO.setup(2, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-#     GPIO.setup(17, GPIO.OUT)
-#
-#     def __init__(self, raiden, initial_price, asset_address, partner_address, granted_overhead=None):
-#         import RPi.GPIO as GPIO
-#         super(PowerMeterRaspberry, self)
-#
-#      # GPIO has fixed callback argument channel
-#
-#     def setup_event(self, callback=None):
-#         GPIO.add_event_detect(2, GPIO.RISING, callback=callback, bouncetime=100)
-#
-#     def cleanup(self):
-#         GPIO.cleanup()
+class PowerConsumerRaspberry(PowerConsumerBase):
+    """
+    Sets up the raspberry's GPIOs, registers callback with the impules event
+    """
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(2, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+    GPIO.setup(17, GPIO.OUT)
+
+    def __init__(self, raiden, initial_price, asset_address, partner_address):
+        import RPi.GPIO as GPIO
+        super(PowerMeterRaspberry, self).__init__(raiden, initial_price, asset_address, partner_address)
+
+     # GPIO has fixed callback argument channel
+
+    def setup_event(self, callback=None):
+        GPIO.add_event_detect(2, GPIO.RISING, callback=callback, bouncetime=100)
+
+    def cleanup(self):
+        GPIO.cleanup()
 
 class PowerConsumerDummy(PowerConsumerBase):
 
