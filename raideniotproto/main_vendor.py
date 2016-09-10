@@ -88,13 +88,11 @@ def main_new(config_dir):
     # print flags
     # print dicts['raiden_accounts.json']
 
-    privatekey = 'c85e103f2b2de251d9af35feb3e9979a8a9109f4bf66d087b200d2ab43d933df'
-    registry_contract_address = '4fb87c52b194f78cd4896e3e574028fedbab9'
+    privatekey = '3cfa276954f2f12a6d8ec0f1a2f13fa2ff3f7cf99f9eb8431a44ee41bc74d5f1'
+    registry_contract_address = '4fb87c52bb6d194f78cd4896e3e574028fedbab9'
     discovery_contract_address = 'ed8d61f42dc1e56ae992d333a4992c3796b22a74'
-    token_address = "ae519fc2ba8e6ffe6473195c092bf1bae986ff90"
+    app = make_app(privatekey, DEFAULT_ETH_RPC_ENDPOINT, registry_contract_address, discovery_contract_address)
 
-    app = make_app(privatekey, DEFAULT_ETH_RPC_ENDPOINT, registry_contract_address,
-        discovery_contract_address)
     # register token once
     app.raiden.chain.default_registry.add_asset(token_address)
     # register adress - endpoint
@@ -106,7 +104,9 @@ def main_new(config_dir):
         gevent.sleep(1)
 
     # obtain channel address!?
-    powermeter = PowerMeterRaspberry(app.raiden, initial_price=1, token_address, partner)
+    managers= app.raiden.get_manager_by_asset_address(decode_hex(token_address))
+    print managers
+    powermeter = PowerMeterRaspberry(app.raiden, 1, token_address, partner)
     powermete.run()
 
 
