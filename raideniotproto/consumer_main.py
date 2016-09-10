@@ -47,23 +47,26 @@ def main_new():
     privatekey = '3cfa276954f2f12a6d8ec0f1a2f13fa2ff3f7cf99f9eb8431a44ee41bc74d5f1'
     registry_contract_address = '4fb87c52bb6d194f78cd4896e3e574028fedbab9'
     discovery_contract_address = 'ed8d61f42dc1e56ae992d333a4992c3796b22a74'
-    app = make_app(privatekey, DEFAULT_ETH_RPC_ENDPOINT, registry_contract_address, discovery_contract_address)
+    token_address = 'ae519fc2ba8e6ffe6473195c092bf1bae986ff90'
+    app = make_app(privatekey, DEFAULT_ETH_RPC_ENDPOINT, registry_contract_address, discovery_contract_address,'0.0.0.0:40001', '192.168.0.139:40001')
     # register token once
     # register adress - endpoint
-    app.discovery.register(app.raiden.address, '192.168.0.139', '40001')
+    #app.discovery.register(app.raiden.address, '192.168.0.139', '40001')
     # wait for receiving address:
     partner = None
     while not partner:
         partner = app.discovery.nodeid_by_host_port(('192.168.0.118', '40001'))
         gevent.sleep(1)
+    partner = partner.encode('hex')
+    print partner
     #TODO: open channel, on consumer: deposit asset
     channel = app.raiden.api.open(token_address, partner)
+    print channel.address.encode('hex')
     app.raiden.api.deposit(token_address, partner, amount=DEFAULT_DEPOSIT_AMOUNT)
-    print channel.address
-
+    print 'deposited', DEFAULT_DEPOSIT_AMOUNT
 
 def make_app(privatekey, eth_rpc_endpoint, registry_contract_address,
-        discovery_contract_address,listen_address='0.0.0.0:40001'):
+        discovery_contract_address,listen_address,external_listen_address):
 
     # config_file = args.config_file
     (listen_host, listen_port) = split_endpoint(listen_address)
@@ -103,7 +106,7 @@ def make_app(privatekey, eth_rpc_endpoint, registry_contract_address,
 
     discovery.register(
         app.raiden.address,
-        *split_endpoint(listen_address)
+        *split_endpoint(external_listen_address)
     )
 
     app.raiden.register_registry(blockchain_service.default_registry)
