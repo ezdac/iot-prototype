@@ -63,6 +63,7 @@ def main_new():
         gevent.sleep(1)
     print partner.encode('hex')
     # obtain channel address!?
+    partner= partner.encode('hex')
     powermeter = PowerMeterRaspberry(app.raiden, 1, token_address, partner)
     powermeter.run()
 

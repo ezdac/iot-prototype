@@ -5,7 +5,7 @@ from tinyrpc.protocols.jsonrpc import JSONRPCProtocol
 from tinyrpc.transports.http import HttpPostClientTransport
 from tinyrpc import RPCClient
 from tinyrpc.client import RPCProxy
-
+from ethereum.utils import decode_hex
 
 
 import gevent
@@ -58,8 +58,8 @@ class PowerMeterBase(object):
     def __init__(self, raiden, initial_price, asset_address, partner_address):
         self.raiden = raiden
         self.api = raiden.api
-        asset_manager= app.raiden.get_manager_by_asset_address(decode_hex(asset_address))
-        self.channel = asset_manager.get_channel_by_partner_address(partner.decode('hex'))
+        asset_manager=raiden.get_manager_by_asset_address(decode_hex(asset_address))
+        self.channel = asset_manager.get_channel_by_partner_address(decode_hex(partner_address))
         self.relay_active = False
         self.consumed_impulses = 1 # overhead that has to be prepaid
         self.price_per_kwh = float(initial_price)
@@ -156,7 +156,7 @@ class PowerMeterRaspberry(PowerMeterBase):
 
     def __init__(self, raiden, initial_price, asset_address, partner_address):
         import RPi.GPIO as GPIO
-        super(PowerMeterRaspberry, self).__init__(self, raiden, initial_price,
+        super(PowerMeterRaspberry, self).__init__(raiden, initial_price,
               asset_address, partner_address)
 
      # GPIO has fixed callback argument channel
