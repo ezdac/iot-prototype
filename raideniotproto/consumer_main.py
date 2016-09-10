@@ -1,12 +1,14 @@
 from consumer import PowerConsumerDummy, JSONRPCServer
-import netifaces as ni
+#import netifaces as ni
 import gevent
+from ethereum.utils import decode_hex
 
 from raiden.raiden_service import RaidenService, DEFAULT_REVEAL_TIMEOUT, DEFAULT_SETTLE_TIMEOUT
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.transport import UDPTransport
 from raiden.network.rpc.client import BlockChainService
 from raiden.app import App
+from raiden.utils import pex, split_endpoint
 
 DEFAULT_INTERFACE_NAME = 'eth0'
 RPCPort = 4040
@@ -27,7 +29,7 @@ def main():
 DEFAULT_ETH_RPC_ENDPOINT = "192.168.0.77:8545"
 DEFAULT_DEPOSIT_AMOUNT = 100
 
-def main_new(config_dir):
+def main_new():
     # files = ['raiden_accounts.json', 'scenario.json', 'genesis.json']
     # dicts = dict()
     # for file in files:
@@ -43,12 +45,9 @@ def main_new(config_dir):
     # print dicts['raiden_accounts.json']
 
     privatekey = '3cfa276954f2f12a6d8ec0f1a2f13fa2ff3f7cf99f9eb8431a44ee41bc74d5f1'
-    registry_contract_address = '4fb87c52b194f78cd4896e3e574028fedbab9'
+    registry_contract_address = '4fb87c52bb6d194f78cd4896e3e574028fedbab9'
     discovery_contract_address = 'ed8d61f42dc1e56ae992d333a4992c3796b22a74'
-    token_address = "ae519fc2ba8e6ffe6473195c092bf1bae986ff90"
-
-    app = make_app(privatekey, DEFAULT_ETH_RPC_ENDPOINT, registry_contract_address,
-        discovery_contract_address)
+    app = make_app(privatekey, DEFAULT_ETH_RPC_ENDPOINT, registry_contract_address, discovery_contract_address)
     # register token once
     # register adress - endpoint
     app.discovery.register(app.raiden.address, '192.168.0.139', '40001')
@@ -64,14 +63,7 @@ def main_new(config_dir):
 
 
 def make_app(privatekey, eth_rpc_endpoint, registry_contract_address,
-        discovery_contract_address):
-
-    slogging.configure(logging, log_file=logfile)
-
-    if not external_listen_address:
-        # notify('if you are behind a NAT, you should set
-        # `external_listen_address` and configure port forwarding on your router')
-        external_listen_address = listen_address
+        discovery_contract_address,listen_address='0.0.0.0:40001'):
 
     # config_file = args.config_file
     (listen_host, listen_port) = split_endpoint(listen_address)
@@ -111,7 +103,7 @@ def make_app(privatekey, eth_rpc_endpoint, registry_contract_address,
 
     discovery.register(
         app.raiden.address,
-        *split_endpoint(external_listen_address)
+        *split_endpoint(listen_address)
     )
 
     app.raiden.register_registry(blockchain_service.default_registry)
