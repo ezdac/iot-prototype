@@ -15,65 +15,23 @@ from vendor_nondaemon import PowerMeterRaspberry
 # from raiden.utils import privtoaddr
 #
 # DEFAULT_INTERFACE_NAME = 'wlp3s0'
+import gevent
+from ethereum import slogging
+from ethereum.utils import decode_hex
 
-def main(consumer_host, consumer_port):
+from raiden.app import App
+from raiden.raiden_service import RaidenService, DEFAULT_REVEAL_TIMEOUT, DEFAULT_SETTLE_TIMEOUT
+from raiden.network.discovery import ContractDiscovery
+from raiden.network.transport import UDPTransport
+from raiden.network.rpc.client import BlockChainService
+from raiden.console import Console
+from raiden.utils import pex, split_endpoint
 
-    ni.ifaddresses(DEFAULT_INTERFACE_NAME)
-    host = ni.ifaddresses(DEFAULT_INTERFACE_NAME)[2][0]['addr']
-
-    deployed_network = deploy_default_config()
-    print deployed_network
-    geth_private_keys = deployed_network['geth_private_keys'] # XXX make shure first one is bootstrap
-    bootstrap_enode = 'enode://{pub}@{host}:{port}'.format(
-        pub=privtoaddr(geth_private_keys[0]).encode('hex'), #XXX check encoding
-        host=host,
-        port=29870 #XXX check
-    )
-    print bootstrap_enode,
-    private_keys = deployed_network['private_keys']
-    geth_remote_private_key= deployed_network['geth_unassigned_private_keys'].pop()
-    consumer_proxy = ConsumerProxy(consumer_host, consumer_port).rpc_proxy
-    private_keys_encoded = [key.encode('hex') for key in private_keys]
-    geth_remote_private_key_encoded = geth_remote_private_key.encode('hex')
-    print private_keys_encoded
-    time.sleep(10000)
-    consumer_proxy.remote_start_geth_node(
-        private_keys_encoded,
-        geth_remote_private_key_encoded,
-        '29870',
-        bootstrap_enode)
-    # consumer_proxy.remote_start_geth_node(
-    #     ['1','2'],
-    #     '1',
-    #     29870,
-    #     '1')
-    deployed_network['geth_private_keys'].append(geth_remote_private_key)
-
-    registry_address = deployed_network['registry_address'].encode('hex')
-    discovery_address = deployed_network['discovery_address'].encode('hex')
-    asset_address = deployed_network['asset_address'].encode('hex')
-
-    time.sleep(10000)
-
-    consumer_proxy.remote_start_raiden_app(
-        discovery_address,
-        registry_address
-    )
-
-    #TODO: get addresses
-    pm = PowerMeterDummy(raiden=deploy_network['raiden_apps'][0], # XXX check for correct app
-        consumer_proxy=consumer_proxy,
-        initial_price=4000,
-        asset_address=asset_address.decode('hex'),
-        partner_address=privtoaddr(private_keys[1]) #XXX check
-    )
-
-    pm.run()
 
 DEFAULT_ETH_RPC_ENDPOINT = '192.168.0.77:8545'
 
 
-def main_new(config_dir):
+def main_new():
     # files = ['raiden_accounts.json', 'scenario.json', 'genesis.json']
     # dicts = dict()
     # for file in files:
@@ -88,38 +46,31 @@ def main_new(config_dir):
     # print flags
     # print dicts['raiden_accounts.json']
 
-    privatekey = '3cfa276954f2f12a6d8ec0f1a2f13fa2ff3f7cf99f9eb8431a44ee41bc74d5f1'
+    privatekey ='c85e103f2b2de251d9af35feb3e9979a8a9109f4bf66d087b200d2ab43d933df' 
     registry_contract_address = '4fb87c52bb6d194f78cd4896e3e574028fedbab9'
     discovery_contract_address = 'ed8d61f42dc1e56ae992d333a4992c3796b22a74'
-    app = make_app(privatekey, DEFAULT_ETH_RPC_ENDPOINT, registry_contract_address, discovery_contract_address)
+    token_address = 'ae519fc2ba8e6ffe6473195c092bf1bae986ff90'
+    app = make_app(privatekey, DEFAULT_ETH_RPC_ENDPOINT, registry_contract_address, discovery_contract_address,'0.0.0.0:40001', '192.168.0.118:40001')
 
     # register token once
     app.raiden.chain.default_registry.add_asset(token_address)
     # register adress - endpoint
-    app.discovery.register(app.raiden.address, '192.168.0.118', '40001')
+    #app.discovery.register(app.raiden.address, '192.168.0.118', '40001')
     # wait for receiving address:
     partner = None
     while not partner:
         partner = app.discovery.nodeid_by_host_port(('192.168.0.139', '40001'))
         gevent.sleep(1)
-
+    print partner.encode('hex')
     # obtain channel address!?
-    managers= app.raiden.get_manager_by_asset_address(decode_hex(token_address))
-    print managers
     powermeter = PowerMeterRaspberry(app.raiden, 1, token_address, partner)
-    powermete.run()
+    powermeter.run()
 
 
 
 def make_app(privatekey, eth_rpc_endpoint, registry_contract_address,
-        discovery_contract_address):
+        discovery_contract_address,listen_address, external_listen_address):
 
-    slogging.configure(logging, log_file=logfile)
-
-    if not external_listen_address:
-        # notify('if you are behind a NAT, you should set
-        # `external_listen_address` and configure port forwarding on your router')
-        external_listen_address = listen_address
 
     # config_file = args.config_file
     (listen_host, listen_port) = split_endpoint(listen_address)
@@ -167,6 +118,4 @@ def make_app(privatekey, eth_rpc_endpoint, registry_contract_address,
     return app
 
 if __name__ == '__main__':
-    #config_dir = sys.argv[1:]
-    config_dir =os.environ['CONFIG_DIR']
     main_new()

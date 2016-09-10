@@ -12,7 +12,7 @@ import gevent
 from geventwebsocket import WebSocketServer, WebSocketApplication, Resource
 
 # from raiden.raiden-service import
-from raiden.tests.conftest import deployed_network
+#from raiden.tests.conftest import deployed_network
 
 class ConsumerProxy(object):
 
@@ -55,10 +55,11 @@ class PowerMeterBase(object):
     # log_fn = '/home/alarm/data/power.log'
     energy_per_impulse = 1/2000. #kwH
 
-    def __init__(self, raiden, initial_price, asset_address, partner_address, granted_overhead=None):
+    def __init__(self, raiden, initial_price, asset_address, partner_address):
         self.raiden = raiden
-        self.channel = ???
         self.api = raiden.api
+        asset_manager= app.raiden.get_manager_by_asset_address(decode_hex(asset_address))
+        self.channel = asset_manager.get_channel_by_partner_address(partner.decode('hex'))
         self.relay_active = False
         self.consumed_impulses = 1 # overhead that has to be prepaid
         self.price_per_kwh = float(initial_price)
@@ -148,14 +149,15 @@ class PowerMeterRaspberry(PowerMeterBase):
     """
     Sets up the raspberry's GPIOs, registers callback with the impules event
     """
+    import RPi.GPIO as GPIO
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(2, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     GPIO.setup(17, GPIO.OUT)
 
-    def __init__(self, raiden, initial_price, asset_address, partner_address, granted_overhead=None):
+    def __init__(self, raiden, initial_price, asset_address, partner_address):
         import RPi.GPIO as GPIO
         super(PowerMeterRaspberry, self).__init__(self, raiden, initial_price,
-              asset_address, partner_address, granted_overhead=None)
+              asset_address, partner_address)
 
      # GPIO has fixed callback argument channel
 
