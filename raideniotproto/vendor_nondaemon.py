@@ -58,8 +58,13 @@ class PowerMeterBase(object):
     def __init__(self, raiden, initial_price, asset_address, partner_address):
         self.raiden = raiden
         self.api = raiden.api
-        asset_manager=raiden.get_manager_by_asset_address(decode_hex(asset_address))
-        self.channel = asset_manager.get_channel_by_partner_address(decode_hex(partner_address))
+        self.channel = None
+        while not self.channel:
+            try:
+                asset_manager=raiden.get_manager_by_asset_address(decode_hex(asset_address))
+                self.channel = asset_manager.get_channel_by_partner_address(decode_hex(vendor_address))
+            except Exception as e:
+                print e
         self.relay_active = False
         self.consumed_impulses = 1 # overhead that has to be prepaid
         self.price_per_kwh = float(initial_price)
@@ -77,8 +82,6 @@ class PowerMeterBase(object):
 
     @property
     def credit(self):
-        # XXX: timeout?, or deactivate relay when funding is not accessible/takes too long
-	print self.channel.balance
         return self.channel.balance
 
 
@@ -98,7 +101,7 @@ class PowerMeterBase(object):
         Maybe implement handling with queue..
 
         """
-        print 'count: {}'.format(self.credit)
+        print 'cb initialised! {} - count: {} credit - {} debit'.format(self.consumed_impulses, self.credit, self.debit)
         # ofh = open(self.log_fn, 'a')
         # ofh.write('{}, {}\n'.format(time.time(), GPIO.input(channel)))
         # ofh.flush()
@@ -115,8 +118,9 @@ class PowerMeterBase(object):
         # exhaustive polling for now
         # activates relay if the debit is paid off
         while True:
-            print self.netted_balance
+            print 'waiting! {} - count: {} credit - {} debit'.format(self.consumed_impulses, self.credit, self.debit)
             if self.netted_balance >= 0 and not self.relay_active:
+                print 'netted balance >=0'
                 self.activate_relay()
                 break
             time.sleep(1)

@@ -46,7 +46,7 @@ def main_new():
     # print flags
     # print dicts['raiden_accounts.json']
 
-    privatekey ='c85e103f2b2de251d9af35feb3e9979a8a9109f4bf66d087b200d2ab43d933df' 
+    privatekey ='c85e103f2b2de251d9af35feb3e9979a8a9109f4bf66d087b200d2ab43d933df'
     registry_contract_address = '4fb87c52bb6d194f78cd4896e3e574028fedbab9'
     discovery_contract_address = 'ed8d61f42dc1e56ae992d333a4992c3796b22a74'
     token_address = 'ae519fc2ba8e6ffe6473195c092bf1bae986ff90'
@@ -64,7 +64,7 @@ def main_new():
     print partner.encode('hex')
     # obtain channel address!?
     partner= partner.encode('hex')
-    powermeter = PowerMeterRaspberry(app.raiden, 1, token_address, partner)
+    powermeter = PowerMeterRaspberry(app.raiden, 2000, token_address, partner)
     powermeter.run()
 
 

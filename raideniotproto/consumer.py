@@ -90,9 +90,14 @@ class PowerConsumerBase(object):
     def __init__(self, raiden, price, asset_address, vendor_address):
         self.raiden = raiden
         self.api = raiden.api
-        asset_manager=raiden.get_manager_by_asset_address(decode_hex(asset_address))
-        self.channel = asset_manager.get_channel_by_partner_address(decode_hex(vendor_address))
-        self.consumed_impulses = 1 # overhead that has to be prepaid
+        self.channel = None
+        while not self.channel:
+            try:
+                asset_manager=raiden.get_manager_by_asset_address(decode_hex(asset_address))
+                self.channel = asset_manager.get_channel_by_partner_address(decode_hex(vendor_address))
+            except Exception as e:
+                print e
+        self.consumed_impulses = 0 # overhead that has to be prepaid
         self.price_per_kwh = float(price)
         self.asset_address = asset_address
         self.partner_address = vendor_address
@@ -118,11 +123,9 @@ class PowerConsumerBase(object):
 
     def settle_incremential(self):
         amount = self.price_per_kwh * self.energy_per_impulse
-	#print amount, type(amount)
         self.raiden.api.transfer_and_wait(
             self.asset_address,
-            #int(math.ceil(amount)),
-            1,
+            int(math.ceil(amount)),
             self.partner_address,
         )
 
@@ -141,25 +144,29 @@ class PowerConsumerBase(object):
         self.add_impulse()
         self.settle_incremential()
 
-    def wait_and_activate(self):
-        # exhaustive polling for now
-        # activates relay if the soll is paid off
-        self.settle_incremential()
-
     def setup_event(self, callback=None):
         raise NotImplemented
 
     def cleanup(self):
         pass
 
+    def initial_deposit(amount):
+        self.raiden.api.transfer_async(
+            self.asset_address,
+            amount,
+            self.partner_address,
+        )
+
+
     def run(self):
         # ofh = open(self.log_fn, 'a')
         self.setup_event(callback=self.event_callback)
         # blocks until first transfer is received
-        self.wait_and_activate()
+        self.initial_deposit(1)
         while True:
             try:
-                time.sleep(1)
+                # FIXME switch to different thread?
+                gevent.sleep(1)
                 continue
             except KeyboardInterrupt:
                 self.cleanup()
