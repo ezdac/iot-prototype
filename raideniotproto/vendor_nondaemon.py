@@ -78,6 +78,7 @@ class PowerMeterBase(object):
     @property
     def credit(self):
         # XXX: timeout?, or deactivate relay when funding is not accessible/takes too long
+	print self.channel.balance
         return self.channel.balance
 
 
@@ -97,7 +98,7 @@ class PowerMeterBase(object):
         Maybe implement handling with queue..
 
         """
-        print 'count: {}'.format(self.credit_balance)
+        print 'count: {}'.format(self.credit)
         # ofh = open(self.log_fn, 'a')
         # ofh.write('{}, {}\n'.format(time.time(), GPIO.input(channel)))
         # ofh.flush()
@@ -114,8 +115,9 @@ class PowerMeterBase(object):
         # exhaustive polling for now
         # activates relay if the debit is paid off
         while True:
+            print self.netted_balance
             if self.netted_balance >= 0 and not self.relay_active:
-                self.activate_relay
+                self.activate_relay()
                 break
             time.sleep(1)
 
@@ -138,7 +140,7 @@ class PowerMeterBase(object):
         self.wait_and_activate()
         while True:
             try:
-                time.sleep(1)
+                gevent.sleep(1)
                 continue
             except KeyboardInterrupt:
                 self.cleanup()
