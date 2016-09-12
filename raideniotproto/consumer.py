@@ -1,9 +1,10 @@
 import sys, os, time, atexit
 from signal import SIGTERM
 import time
-import RPi.GPIO as GPIO 
+import RPi.GPIO as GPIO
 import inspect
 
+import gevent
 import gevent.wsgi
 import gevent.queue
 
@@ -154,14 +155,13 @@ class PowerConsumerBase(object):
         pass
 
     def run(self):
-        assert self.consumer_ready
         # ofh = open(self.log_fn, 'a')
         self.setup_event(callback=self.event_callback)
         # blocks until first transfer is received
         self.wait_and_activate()
         while True:
             try:
-                time.sleep(1)
+                gevent.sleep(1)
                 continue
             except KeyboardInterrupt:
                 self.cleanup()
