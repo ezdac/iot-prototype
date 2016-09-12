@@ -1,3 +1,7 @@
+
+from gevent import monkey
+monkey.patch_all()
+
 import sys, os, time, atexit, math
 from signal import SIGTERM
 import time
@@ -8,9 +12,6 @@ import gevent
 import gevent.wsgi
 import gevent.queue
 
-import gevent.wsgi
-import gevent.queue
-
 from tinyrpc.server import RPCServer
 from tinyrpc.dispatch import RPCDispatcher, public
 from tinyrpc.protocols.jsonrpc import JSONRPCProtocol
@@ -18,7 +19,6 @@ from tinyrpc.transports.wsgi import WsgiServerTransport
 from tinyrpc.server.gevent import RPCServerGreenlets
 from ethereum.utils import decode_hex
 
-import gevent
 from geventwebsocket import WebSocketServer, WebSocketApplication, Resource
 
 #from raiden.tests.utils.network import start_geth_node
@@ -26,6 +26,7 @@ from raiden.app import App as RaidenApp
 from raiden.app import INITIAL_PORT
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import BlockChainService
+
 
 class JSONRPCServer(object):
 
@@ -123,17 +124,20 @@ class PowerConsumerBase(object):
 
     def settle_incremential(self):
         amount = self.price_per_kwh * self.energy_per_impulse
-        self.raiden.api.transfer_and_wait(
+        transfer = self.raiden.api.transfer_async(
             self.asset_address,
             int(math.ceil(amount)),
             self.partner_address,
         )
+	try:
+	    return transfer.get()
+	except Exception as e:
+	    print e
 
      # GPIO has fixed callback argument channel
 
 
 
-    @public
     def event_callback(self, channel):
         """ Gets registered with GPIO, will get executed on every impulse.
         Requires, that raiden/rpc polling isn't blocking and doesn't take longer than the next impulse
@@ -150,27 +154,39 @@ class PowerConsumerBase(object):
     def cleanup(self):
         pass
 
-    def initial_deposit(amount):
-        self.raiden.api.transfer_async(
+    def initial_deposit(self, amount):
+        transfer = self.raiden.api.transfer_async(
             self.asset_address,
-            amount,
+            int(math.ceil(amount)),
             self.partner_address,
         )
+	try:
+	    return transfer.get()
+	except Exception as e:
+	    print e
+
 
 
     def run(self):
+        import signal
+        from gevent.event import Event
         # ofh = open(self.log_fn, 'a')
         self.setup_event(callback=self.event_callback)
         # blocks until first transfer is received
         self.initial_deposit(1)
-        while True:
-            try:
-                # FIXME switch to different thread?
-                gevent.sleep(1)
-                continue
-            except KeyboardInterrupt:
-                self.cleanup()
-                sys.exit()
+	#gevent.wait()
+        #while True:
+        #    try:
+        #        # FIXME switch to different thread?
+        #        gevent.sleep(1)
+        #        continue
+        #    except KeyboardInterrupt:
+        #        self.cleanup()
+        #        sys.exit()
+        evt = Event()
+        gevent.signal(signal.SIGQUIT, evt.set)
+        gevent.signal(signal.SIGTERM, evt.set)
+        evt.wait()
 
 
 class PowerConsumerRaspberry(PowerConsumerBase):
@@ -242,5 +258,5 @@ class PowerConsumerDummy(PowerConsumerBase):
 if __name__ == "__main__":
     # server = WebSocketServer(('', 8000), resource, debug=True)
     # server.serve_forever()
-    pm = PowerMeter()
-    pm.run()
+	    pm = PowerMeter()
+	    pm.run()
