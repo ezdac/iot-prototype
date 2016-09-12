@@ -123,11 +123,16 @@ class PowerConsumerBase(object):
 
     def settle_incremential(self):
         amount = self.price_per_kwh * self.energy_per_impulse
-        self.raiden.api.transfer_and_wait(
+        transfer = self.raiden.api.transfer_async(
             self.asset_address,
             int(math.ceil(amount)),
             self.partner_address,
         )
+        # try:
+        #     return transfer.get()
+        # except Exception:
+        #     pass
+
 
      # GPIO has fixed callback argument channel
 
@@ -163,14 +168,19 @@ class PowerConsumerBase(object):
         self.setup_event(callback=self.event_callback)
         # blocks until first transfer is received
         self.initial_deposit(1)
-        while True:
-            try:
-                # FIXME switch to different thread?
-                gevent.sleep(1)
-                continue
-            except KeyboardInterrupt:
-                self.cleanup()
-                sys.exit()
+        # while True:
+        #     try:
+        #
+        #         # FIXME switch to different thread?
+        #         gevent.sleep(1)
+        #         continue
+        #     except KeyboardInterrupt:
+        #         self.cleanup()
+        #         sys.exit()
+        evt = Event()
+        gevent.signal(signal.SIGQUIT, evt.set)
+        gevent.signal(signal.SIGTERM, evt.set)
+        evt.wait()
 
 
 class PowerConsumerRaspberry(PowerConsumerBase):
