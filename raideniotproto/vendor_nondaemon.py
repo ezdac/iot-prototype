@@ -6,7 +6,7 @@ from tinyrpc.transports.http import HttpPostClientTransport
 from tinyrpc import RPCClient
 from tinyrpc.client import RPCProxy
 from ethereum.utils import decode_hex
-
+import RPi.GPIO as GPIO
 
 import gevent
 from geventwebsocket import WebSocketServer, WebSocketApplication, Resource
