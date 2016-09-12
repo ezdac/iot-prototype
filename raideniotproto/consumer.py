@@ -1,4 +1,4 @@
-import sys, os, time, atexit
+import sys, os, time, atexit, math
 from signal import SIGTERM
 import time
 import RPi.GPIO as GPIO
@@ -118,9 +118,11 @@ class PowerConsumerBase(object):
 
     def settle_incremential(self):
         amount = self.price_per_kwh * self.energy_per_impulse
-        self.raiden.api.transfer(
+	#print amount, type(amount)
+        self.raiden.api.transfer_and_wait(
             self.asset_address,
-            amount,
+            #int(math.ceil(amount)),
+            1,
             self.partner_address,
         )
 
@@ -139,14 +141,10 @@ class PowerConsumerBase(object):
         self.add_impulse()
         self.settle_incremential()
 
-    # def wait_and_activate(self):
-    #     # exhaustive polling for now
-    #     # activates relay if the soll is paid off
-    #     while True:
-    #         if self.netted_balance >= 0 and not self.relay_active:
-    #             self.activate_relay
-    #             break
-    #         time.sleep(1)
+    def wait_and_activate(self):
+        # exhaustive polling for now
+        # activates relay if the soll is paid off
+        self.settle_incremential()
 
     def setup_event(self, callback=None):
         raise NotImplemented
@@ -161,7 +159,7 @@ class PowerConsumerBase(object):
         self.wait_and_activate()
         while True:
             try:
-                gevent.sleep(1)
+                time.sleep(1)
                 continue
             except KeyboardInterrupt:
                 self.cleanup()
