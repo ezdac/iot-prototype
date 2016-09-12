@@ -1,7 +1,7 @@
 import sys, os, time, atexit
 from signal import SIGTERM
 import time
-#import RPIO as GPIO # drop-in-replacement!
+import RPi.GPIO as GPIO 
 import inspect
 
 import gevent.wsgi
@@ -15,7 +15,7 @@ from tinyrpc.dispatch import RPCDispatcher, public
 from tinyrpc.protocols.jsonrpc import JSONRPCProtocol
 from tinyrpc.transports.wsgi import WsgiServerTransport
 from tinyrpc.server.gevent import RPCServerGreenlets
-
+from ethereum.utils import decode_hex
 
 import gevent
 from geventwebsocket import WebSocketServer, WebSocketApplication, Resource
@@ -178,7 +178,7 @@ class PowerConsumerRaspberry(PowerConsumerBase):
 
     def __init__(self, raiden, initial_price, asset_address, partner_address):
         import RPi.GPIO as GPIO
-        super(PowerMeterRaspberry, self).__init__(raiden, initial_price, asset_address, partner_address)
+        super(PowerConsumerRaspberry, self).__init__(raiden, initial_price, asset_address, partner_address)
 
      # GPIO has fixed callback argument channel
 

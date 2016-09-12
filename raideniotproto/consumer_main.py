@@ -1,4 +1,3 @@
-from consumer import PowerConsumerDummy, JSONRPCServer
 #import netifaces as ni
 import gevent
 from ethereum.utils import decode_hex
@@ -10,6 +9,9 @@ from raiden.network.rpc.client import BlockChainService
 from raiden.app import App
 from raiden.utils import pex, split_endpoint
 
+import sys # FIXME
+sys.path.append('/home/alarm/raiden/raiden/iotprototype/raideniotproto')
+print sys.path
 from consumer import PowerConsumerRaspberry
 
 DEFAULT_INTERFACE_NAME = 'eth0'
