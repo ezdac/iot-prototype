@@ -174,15 +174,13 @@ class PowerConsumerBase(object):
         self.setup_event(callback=self.event_callback)
         # blocks until first transfer is received
         self.initial_deposit(1)
-	#gevent.wait()
-        #while True:
-        #    try:
-        #        # FIXME switch to different thread?
-        #        gevent.sleep(1)
-        #        continue
-        #    except KeyboardInterrupt:
-        #        self.cleanup()
-        #        sys.exit()
+        while True: 
+        #         # FIXME switch to different thread?
+        #         gevent.sleep(1)
+        #         continue
+        #     except KeyboardInterrupt:
+        #         self.cleanup()
+        #         sys.exit()
         evt = Event()
         gevent.signal(signal.SIGQUIT, evt.set)
         gevent.signal(signal.SIGTERM, evt.set)
