@@ -9,10 +9,10 @@ from raiden.network.rpc.client import BlockChainService
 from raiden.app import App
 from raiden.utils import pex, split_endpoint
 
-import sys # FIXME
-sys.path.append('/home/alarm/raiden/raiden/iotprototype/raideniotproto')
-print sys.path
 from consumer import PowerConsumerRaspberry
+
+from ethereum import slogging
+slogging.configure(':INFO')
 
 DEFAULT_INTERFACE_NAME = 'eth0'
 RPCPort = 4040
@@ -30,7 +30,7 @@ def main():
     #     gevent.sleep(1)
     # app.run()
 
-DEFAULT_ETH_RPC_ENDPOINT = "192.168.0.77:8545"
+DEFAULT_ETH_RPC_ENDPOINT = "192.168.0.72:8545"
 DEFAULT_DEPOSIT_AMOUNT = 100
 
 def main_new():
@@ -55,6 +55,12 @@ def main_new():
     app = make_app(privatekey, DEFAULT_ETH_RPC_ENDPOINT, registry_contract_address, discovery_contract_address,'0.0.0.0:40001', '192.168.0.139:40001')
     # register token once
     # register adress - endpoint
+    if app.transport:
+        print app.transport.server
+        print app.transport.server.server_host, app.transport.server.server_port
+    else:
+        print 'No Transport found'
+
     #app.discovery.register(app.raiden.address, '192.168.0.139', '40001')
     # wait for receiving address:
     partner = None
@@ -68,7 +74,7 @@ def main_new():
     print channel.address.encode('hex')
     app.raiden.api.deposit(token_address, partner, amount=DEFAULT_DEPOSIT_AMOUNT)
     print 'deposited', DEFAULT_DEPOSIT_AMOUNT
-    powerconsumer = PowerConsumerRaspberry(app.raiden, 1, token_address, partner)
+    powerconsumer = PowerConsumerRaspberry(app.raiden, 2000, token_address, partner)
     powerconsumer.run()
 
 

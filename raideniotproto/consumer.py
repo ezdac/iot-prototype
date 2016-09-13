@@ -159,8 +159,9 @@ class PowerConsumerBase(object):
         """
 	print 'event_callback invoked'
         print self.consumed_impulses
+        print self.channel.balance
         self.add_impulse()
-        gevent.spawn(self.settle_incremential)
+        self.settle_incremential()
 
     def setup_event(self, callback=None):
         GPIO.add_event_detect(2, GPIO.RISING, callback=callback, bouncetime=100)
@@ -185,14 +186,22 @@ class PowerConsumerBase(object):
     def printer(self):
         print 'dummy callback invoked'
 
+    def event_watcher(self,channel, callback=None):
+        while True:
+            gevent.sleep(0.001)
+            if GPIO.event_detected(2):
+                print 'event detected'
+                callback()
+
     def run(self):
         import signal
         from gevent.event import Event
         callback = lambda channel: gevent.spawn(self.event_callback)  
-        GPIO.add_event_detect(2, GPIO.RISING,callback=callback, bouncetime=100)
+        GPIO.add_event_detect(2, GPIO.RISING, bouncetime=100)
         # blocks until first transfer is received
-	gevent.spawn(self.initial_deposit, 10)
+	gevent.spawn(self.initial_deposit, 5)
         print 'initial deposit gone through, start settle incremential'
+        gevent.spawn(self.event_watcher,2,self.event_callback)
         evt = Event()
         gevent.signal(signal.SIGQUIT, evt.set)
         gevent.signal(signal.SIGTERM, evt.set)
