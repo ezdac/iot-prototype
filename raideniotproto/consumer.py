@@ -124,32 +124,47 @@ class PowerConsumerBase(object):
 
     def settle_incremential(self):
         amount = self.price_per_kwh * self.energy_per_impulse
-        transfer = self.raiden.api.transfer_async(
+        #transfer = self.raiden.api.transfer_async(
+        #    self.asset_address,
+        #    int(math.ceil(amount)),
+        #    self.partner_address,
+        #)
+	#try:
+        #    return_val = transfer.get()
+        #    print return_val
+        #    print 'settle incremential invoked'
+	#    return return_valt
+	#except Exception as e:
+	#    print e, 'excpetion from settle incremential greenlet' 
+        result = self.raiden.api.transfer_async(
             self.asset_address,
             int(math.ceil(amount)),
-            self.partner_address,
+            self.partner_address
         )
-	try:
-	    return transfer.get()
-	except Exception as e:
-	    print e
-
+        try:
+            print 'trying to get AsyncResult'
+            return result.get()
+        except:
+            print 'exception in settle incr'
      # GPIO has fixed callback argument channel
 
 
 
-    def event_callback(self, channel):
+    def event_callback(self):
         """ Gets registered with GPIO, will get executed on every impulse.
         Requires, that raiden/rpc polling isn't blocking and doesn't take longer than the next impulse
 
         Maybe implement handling with queue..
 
         """
+	print 'event_callback invoked'
+        print self.consumed_impulses
         self.add_impulse()
-        self.settle_incremential()
+        gevent.spawn(self.settle_incremential)
 
     def setup_event(self, callback=None):
-        raise NotImplemented
+        GPIO.add_event_detect(2, GPIO.RISING, callback=callback, bouncetime=100)
+
 
     def cleanup(self):
         pass
@@ -161,30 +176,49 @@ class PowerConsumerBase(object):
             self.partner_address,
         )
 	try:
-	    return transfer.get()
+            return_val = transfer.get()
+            print return_val
+	    return return_val
 	except Exception as e:
 	    print e
 
-
+    def printer(self):
+        print 'dummy callback invoked'
 
     def run(self):
         import signal
         from gevent.event import Event
-        # ofh = open(self.log_fn, 'a')
-        self.setup_event(callback=self.event_callback)
+        callback = lambda channel: gevent.spawn(self.event_callback)  
+        GPIO.add_event_detect(2, GPIO.RISING,callback=callback bouncetime=100)
         # blocks until first transfer is received
-        self.initial_deposit(1)
-        while True: 
-        #         # FIXME switch to different thread?
-        #         gevent.sleep(1)
-        #         continue
-        #     except KeyboardInterrupt:
-        #         self.cleanup()
-        #         sys.exit()
+	gevent.spawn(self.initial_deposit, 10)
+        print 'initial deposit gone through, start settle incremential'
         evt = Event()
         gevent.signal(signal.SIGQUIT, evt.set)
         gevent.signal(signal.SIGTERM, evt.set)
         evt.wait()
+        self.cleanup()
+
+    def run_manual(self):
+        import signal
+        from gevent.event import Event
+        print_me = lambda channel: gevent.spawn(self.printer)
+        GPIO.add_event_detect(2, GPIO.RISING, bouncetime=100)
+        GPIO.add_event_callback(2,print_me)
+        # blocks until first transfer is received
+	gevent.spawn(self.initial_deposit, 10)
+        print 'initial deposit gone through, start settle incremential'
+        gevent.spawn(self.settle_incremential)
+        print 'manual callback exec'
+        callback('None')
+        callback('None')
+        gevent.spawn(self.event_callback, 'None')
+        evt = Event()
+        gevent.signal(signal.SIGQUIT, evt.set)
+        gevent.signal(signal.SIGTERM, evt.set)
+        evt.wait()
+        self.cleanup()
+
 
 
 class PowerConsumerRaspberry(PowerConsumerBase):
