@@ -7,6 +7,7 @@ from signal import SIGTERM
 import time
 import RPi.GPIO as GPIO
 import inspect
+import requests
 
 import gevent
 import gevent.wsgi
@@ -90,7 +91,7 @@ class PowerConsumerBase(object):
     def cleanup(self):
         pass
 
-    def transfer(amount):
+    def transfer(self,amount):
         # amount should be int
         try:
             transfer = self.raiden.api.transfer_async(
@@ -99,7 +100,7 @@ class PowerConsumerBase(object):
                     self.partner_address,
                 )
             if self.ui_server:
-                requests.post(self.ui_server + '/pay/'+str(amount))
+                requests.get(self.ui_server + '/pay/'+str(amount))
         except ValueError:
             print 'Insufficient Funds in channel'
             transfer = None # FIXME
@@ -120,10 +121,12 @@ class PowerConsumerBase(object):
         from gevent.event import Event
         GPIO.add_event_detect(2, GPIO.RISING, bouncetime=100)
         # transfer initial deposit to get the light going
-        initial_amount = 5
+        initial_amount = self.channel.balance 
+        prepaid_amount = 4
         if self.ui_server:
-            requests.post(self.ui_server + '/init/'+str(initial_amount))
-	    gevent.spawn(self.transfer, initial_amount)
+            requests.get(self.ui_server + '/init/'+str(initial_amount))
+            requests.get(self.ui_server + '/pay/' + str(prepaid_amount))
+	gevent.spawn(self.transfer, prepaid_amount)
         # event polling for impulse, execute callback on event
         gevent.spawn(self.event_watcher,2,self.event_callback)
         evt = Event()
@@ -141,9 +144,9 @@ class PowerConsumerRaspberry(PowerConsumerBase):
     GPIO.setup(2, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     GPIO.setup(17, GPIO.OUT)
 
-    def __init__(self, raiden, initial_price, asset_address, partner_address):
+    def __init__(self, raiden, initial_price, asset_address, partner_address, ui_server=None):
         import RPi.GPIO as GPIO
-        super(PowerConsumerRaspberry, self).__init__(raiden, initial_price, asset_address, partner_address)
+        super(PowerConsumerRaspberry, self).__init__(raiden, initial_price, asset_address, partner_address, ui_server)
 
      # GPIO has fixed callback argument channel
 

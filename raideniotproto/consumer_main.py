@@ -65,7 +65,7 @@ def main_new():
     channel = app.raiden.api.open(token_address, partner)
     # only deposit if not already deposited desired amount
     app.raiden.api.deposit(token_address, partner, amount=DEFAULT_DEPOSIT_AMOUNT)
-    powerconsumer = PowerConsumerRaspberry(app.raiden, 4000, token_address, partner, ui_server='192.168.0.72:8000')
+    powerconsumer = PowerConsumerRaspberry(app.raiden, 4000, token_address, partner, ui_server='http://192.168.0.72:8000')
     powerconsumer.run()
 
 
