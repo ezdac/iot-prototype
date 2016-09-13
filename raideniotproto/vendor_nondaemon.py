@@ -8,6 +8,9 @@ from tinyrpc.client import RPCProxy
 from ethereum.utils import decode_hex
 import RPi.GPIO as GPIO
 
+
+import requests
+
 import gevent
 from geventwebsocket import WebSocketServer, WebSocketApplication, Resource
 
@@ -55,7 +58,8 @@ class PowerMeterBase(object):
     # log_fn = '/home/alarm/data/power.log'
     energy_per_impulse = 1/2000. #kwH
 
-    def __init__(self, raiden,initial_price, asset_address, partner_address, ui_server):
+    def __init__(self, raiden,initial_price, asset_address, partner_address, ui_server=None):
+        self.deactivate_relay()
         self.raiden = raiden
         self.api = raiden.api
         self.channel = None
@@ -63,9 +67,10 @@ class PowerMeterBase(object):
         while not self.channel:
             try:
                 asset_manager=raiden.get_manager_by_asset_address(decode_hex(asset_address))
-                self.channel = asset_manager.get_channel_by_partner_address(decode_hex(vendor_address))
+                self.channel = asset_manager.get_channel_by_partner_address(decode_hex(partner_address))
             except Exception as e:
                 # pass silently FIXME
+                print e
         self.relay_active = False
         self.consumed_impulses = 1 # overhead that has to be prepaid
         self.price_per_kwh = float(initial_price)
@@ -94,7 +99,7 @@ class PowerMeterBase(object):
 
     def add_impulse(self):
         if self.ui_server:
-            requests.post(self.ui_server + '/power_tick')
+            requests.get(self.ui_server + '/power_tick')
         self.consumed_impulses += 1
 
      # GPIO has fixed callback argument channel
@@ -165,10 +170,10 @@ class PowerMeterRaspberry(PowerMeterBase):
     GPIO.setup(2, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     GPIO.setup(17, GPIO.OUT)
 
-    def __init__(self, raiden, initial_price, asset_address, partner_address):
+    def __init__(self, raiden, initial_price, asset_address, partner_address, ui_server=None):
         import RPi.GPIO as GPIO
         super(PowerMeterRaspberry, self).__init__(raiden, initial_price,
-              asset_address, partner_address)
+              asset_address, partner_address, ui_server)
 
      # GPIO has fixed callback argument channel
 

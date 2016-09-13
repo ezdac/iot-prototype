@@ -28,7 +28,7 @@ from raiden.console import Console
 from raiden.utils import pex, split_endpoint
 
 
-DEFAULT_ETH_RPC_ENDPOINT = '192.168.0.77:8545'
+DEFAULT_ETH_RPC_ENDPOINT = '192.168.0.72:8545'
 
 
 def main_new():
@@ -62,7 +62,7 @@ def main_new():
         gevent.sleep(1)
     partner= partner.encode('hex')
     print 'Partner found:{}'.format(partner)
-    powermeter = PowerMeterRaspberry(app.raiden, 4000, token_address, partner, ui_server='192.168.0.72:8000')
+    powermeter = PowerMeterRaspberry(app.raiden, 4000, token_address, partner, ui_server='http://192.168.0.72:8000')
     powermeter.run()
 
 
