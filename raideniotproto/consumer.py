@@ -43,8 +43,8 @@ class PowerConsumerBase(object):
             try:
                 asset_manager=raiden.get_manager_by_asset_address(decode_hex(asset_address))
                 self.channel = asset_manager.get_channel_by_partner_address(decode_hex(vendor_address))
-            except Exception as e:
-                raise e
+            # except Exception as e:
+            #     raise e
         self.consumed_impulses = 0 # overhead that has to be prepaid
         self.price_per_kwh = float(price)
         self.asset_address = asset_address
@@ -99,11 +99,13 @@ class PowerConsumerBase(object):
                     amount,
                     self.partner_address,
                 )
-            if self.ui_server:
-                requests.get(self.ui_server + '/pay/'+str(amount))
-        except ValueError:
-            print 'Insufficient Funds in channel'
-            transfer = None # FIXME
+        except ValueError as v:
+            from gevent.event import AsyncResult
+            print 'Insufficient Funds in channel?', v
+            transfer = AsyncResult()
+            transfer.set(False)
+        if self.ui_server:
+            requests.get(self.ui_server + '/pay/'+str(amount))
     	try:
     	    return transfer.get()
     	except Exception as e:
@@ -121,12 +123,12 @@ class PowerConsumerBase(object):
         from gevent.event import Event
         GPIO.add_event_detect(2, GPIO.RISING, bouncetime=100)
         # transfer initial deposit to get the light going
-        initial_amount = self.channel.balance 
+        initial_amount = self.channel.balance
         prepaid_amount = 4
         if self.ui_server:
-            requests.get(self.ui_server + '/init/'+str(initial_amount))
-            requests.get(self.ui_server + '/pay/' + str(prepaid_amount))
-	gevent.spawn(self.transfer, prepaid_amount)
+            requests.get(self.ui_server + '/init/'+str(int(initial_amount)))
+            requests.get(self.ui_server + '/pay/' + str(int(prepaid_amount)))
+	    gevent.spawn(self.transfer, prepaid_amount)
         # event polling for impulse, execute callback on event
         gevent.spawn(self.event_watcher,2,self.event_callback)
         evt = Event()

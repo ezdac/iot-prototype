@@ -61,10 +61,20 @@ def main_new():
         gevent.sleep(1)
     partner = partner.encode('hex')
     print partner
-    # only open channel if not already opened
-    channel = app.raiden.api.open(token_address, partner)
+    # only open channel if not already opened XXX
+    channel = None
+    while not channel:
+        try:
+            channel = app.raiden.api.open(token_address, partner)
+        except JSONRPCClientReplyError:
+            continue
+
     # only deposit if not already deposited desired amount
-    app.raiden.api.deposit(token_address, partner, amount=DEFAULT_DEPOSIT_AMOUNT)
+    try:
+        app.raiden.api.deposit(token_address, partner, amount=DEFAULT_DEPOSIT_AMOUNT)
+    except Exception:
+        print 'nothing deposited'
+        pass
     powerconsumer = PowerConsumerRaspberry(app.raiden, 4000, token_address, partner, ui_server='http://192.168.0.72:8000')
     powerconsumer.run()
 

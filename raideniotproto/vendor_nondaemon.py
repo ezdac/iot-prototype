@@ -70,7 +70,7 @@ class PowerMeterBase(object):
                 self.channel = asset_manager.get_channel_by_partner_address(decode_hex(partner_address))
             except Exception as e:
                 # pass silently FIXME
-                print e
+                pass
         self.relay_active = False
         self.consumed_impulses = 1 # overhead that has to be prepaid
         self.price_per_kwh = float(initial_price)
