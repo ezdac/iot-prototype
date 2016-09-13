@@ -50,21 +50,19 @@ def main_new():
     registry_contract_address = '4fb87c52bb6d194f78cd4896e3e574028fedbab9'
     discovery_contract_address = 'ed8d61f42dc1e56ae992d333a4992c3796b22a74'
     token_address = 'ae519fc2ba8e6ffe6473195c092bf1bae986ff90'
-    app = make_app(privatekey, DEFAULT_ETH_RPC_ENDPOINT, registry_contract_address, discovery_contract_address,'0.0.0.0:40001', '192.168.0.118:40001')
-
-    # register token once
+    app = make_app(privatekey, DEFAULT_ETH_RPC_ENDPOINT, registry_contract_address,
+        discovery_contract_address,'0.0.0.0:40001', '192.168.0.118:40001'
+    )
+    # register token once, if not registered already
     app.raiden.chain.default_registry.add_asset(token_address)
-    # register adress - endpoint
-    #app.discovery.register(app.raiden.address, '192.168.0.118', '40001')
-    # wait for receiving address:
+    # wait for partner:
     partner = None
     while not partner:
         partner = app.discovery.nodeid_by_host_port(('192.168.0.139', '40001'))
         gevent.sleep(1)
-    print partner.encode('hex')
-    # obtain channel address!?
     partner= partner.encode('hex')
-    powermeter = PowerMeterRaspberry(app.raiden, 2000, token_address, partner)
+    print 'Partner found:{}'.format(partner)
+    powermeter = PowerMeterRaspberry(app.raiden, 4000, token_address, partner, ui_server='192.168.0.72:8000')
     powermeter.run()
 
 
@@ -109,6 +107,7 @@ def make_app(privatekey, eth_rpc_endpoint, registry_contract_address,
 
     app = App(config, blockchain_service, discovery)
 
+    # register external address to registry
     discovery.register(
         app.raiden.address,
         *split_endpoint(external_listen_address)

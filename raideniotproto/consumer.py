@@ -28,67 +28,13 @@ from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import BlockChainService
 
 
-class JSONRPCServer(object):
-
-    dispatcher = RPCDispatcher()
-    transport = WsgiServerTransport(queue_class=gevent.queue.Queue)
-
-    def __init__(self, app, host, port):
-        self.app = app
-        self.wsgi_server = gevent.wsgi.WSGIServer((host, port), self.transport.handle)
-
-        # call e.g. 'raiden.api.transfer' via JSON RPC
-        self.dispatcher.register_instance(self.app)
-        self.rpc_server = RPCServerGreenlets(
-            self.transport,
-            JSONRPCProtocol(),
-            self.dispatcher
-            )
-
-    def start(self):
-        method_names = [k[0] for k in inspect.getmembers(self.app, inspect.ismethod)]
-	has_attribute = [k[1] for k in inspect.getmembers(self.app, inspect.ismethod) if '_rpc_public_name' in k[1].__dict__]
-	print has_attribute
-        registered = []
-        for name in method_names:
-            try:
-                is_registered = self.dispatcher.get_method(name)
-            except KeyError:
-                is_registered = False
-		pass
-            finally:
-		registered.append((name, is_registered))
-        print 'Public methods: ', registered
-        gevent.spawn(self.wsgi_server.serve_forever)
-        self.rpc_server.serve_forever()
-
-
-
-# class PlotApplication(WebSocketApplication):
-#     def __init__(self, app=None):
-#         super(PlotApplication, self).__init__()
-#         self.app = app
-#
-#     def on_open(self):
-#         print 'ws opened'
-#         time = 0
-#         while True:
-#             self.ws.send("0 %s %s\n" % (time, self.app.))
-#             time++
-#             gevent.sleep(0.1)
-#
-#     def on_close(self, reason):
-#         print "Connection Closed!!!", reason
-
-
 class PowerConsumerBase(object):
     """
     Count impulses from electricity meter
     """
-    log_fn = '/home/alarm/data/power.log'
     energy_per_impulse = 1/2000. #kW
 
-    def __init__(self, raiden, price, asset_address, vendor_address):
+    def __init__(self, raiden, price, asset_address, vendor_address, ui_server=None):
         self.raiden = raiden
         self.api = raiden.api
         self.channel = None
@@ -97,11 +43,13 @@ class PowerConsumerBase(object):
                 asset_manager=raiden.get_manager_by_asset_address(decode_hex(asset_address))
                 self.channel = asset_manager.get_channel_by_partner_address(decode_hex(vendor_address))
             except Exception as e:
-                print e
+                raise e
         self.consumed_impulses = 0 # overhead that has to be prepaid
         self.price_per_kwh = float(price)
         self.asset_address = asset_address
         self.partner_address = vendor_address
+        if ui_server:
+            self.ui_server = ui_server
 
     @property
     def electricity_consumed(self):
@@ -124,31 +72,8 @@ class PowerConsumerBase(object):
 
     def settle_incremential(self):
         amount = self.price_per_kwh * self.energy_per_impulse
-        #transfer = self.raiden.api.transfer_async(
-        #    self.asset_address,
-        #    int(math.ceil(amount)),
-        #    self.partner_address,
-        #)
-	#try:
-        #    return_val = transfer.get()
-        #    print return_val
-        #    print 'settle incremential invoked'
-	#    return return_valt
-	#except Exception as e:
-	#    print e, 'excpetion from settle incremential greenlet' 
-        result = self.raiden.api.transfer_async(
-            self.asset_address,
-            int(math.ceil(amount)),
-            self.partner_address
-        )
-        try:
-            print 'trying to get AsyncResult'
-            return result.get()
-        except:
-            print 'exception in settle incr'
-     # GPIO has fixed callback argument channel
-
-
+        amount = int(math.ceil(amount))
+        self.transfer(amount)
 
     def event_callback(self):
         """ Gets registered with GPIO, will get executed on every impulse.
@@ -157,77 +82,55 @@ class PowerConsumerBase(object):
         Maybe implement handling with queue..
 
         """
-	print 'event_callback invoked'
         print self.consumed_impulses
         print self.channel.balance
         self.add_impulse()
         self.settle_incremential()
 
-    def setup_event(self, callback=None):
-        GPIO.add_event_detect(2, GPIO.RISING, callback=callback, bouncetime=100)
-
-
     def cleanup(self):
         pass
 
-    def initial_deposit(self, amount):
-        transfer = self.raiden.api.transfer_async(
-            self.asset_address,
-            int(math.ceil(amount)),
-            self.partner_address,
-        )
-	try:
-            return_val = transfer.get()
-            print return_val
-	    return return_val
-	except Exception as e:
-	    print e
+    def transfer(amount):
+        # amount should be int
+        try:
+            transfer = self.raiden.api.transfer_async(
+                    self.asset_address,
+                    amount,
+                    self.partner_address,
+                )
+            if self.ui_server:
+                requests.post(self.ui_server + '/pay/'+str(amount))
+        except ValueError:
+            print 'Insufficient Funds in channel'
+            transfer = None # FIXME
+    	try:
+    	    return transfer.get()
+    	except Exception as e:
+    	    raise e
 
-    def printer(self):
-        print 'dummy callback invoked'
 
     def event_watcher(self,channel, callback=None):
         while True:
             gevent.sleep(0.001)
             if GPIO.event_detected(2):
-                print 'event detected'
                 callback()
 
     def run(self):
         import signal
         from gevent.event import Event
-        callback = lambda channel: gevent.spawn(self.event_callback)  
         GPIO.add_event_detect(2, GPIO.RISING, bouncetime=100)
-        # blocks until first transfer is received
-	gevent.spawn(self.initial_deposit, 5)
-        print 'initial deposit gone through, start settle incremential'
+        # transfer initial deposit to get the light going
+        initial_amount = 5
+        if self.ui_server:
+            requests.post(self.ui_server + '/init/'+str(initial_amount))
+	    gevent.spawn(self.transfer, initial_amount)
+        # event polling for impulse, execute callback on event
         gevent.spawn(self.event_watcher,2,self.event_callback)
         evt = Event()
         gevent.signal(signal.SIGQUIT, evt.set)
         gevent.signal(signal.SIGTERM, evt.set)
         evt.wait()
         self.cleanup()
-
-    def run_manual(self):
-        import signal
-        from gevent.event import Event
-        print_me = lambda channel: gevent.spawn(self.printer)
-        GPIO.add_event_detect(2, GPIO.RISING,callback=print_me, bouncetime=100)
-        # blocks until first transfer is received
-	gevent.spawn(self.initial_deposit, 10)
-        print 'initial deposit gone through, start settle incremential'
-        gevent.spawn(self.settle_incremential)
-        print 'manual callback exec'
-        callback = lambda channel: gevent.spawn(self.event_callback)  
-        callback('None')
-        callback('None')
-        gevent.spawn(self.event_callback)
-        evt = Event()
-        gevent.signal(signal.SIGQUIT, evt.set)
-        gevent.signal(signal.SIGTERM, evt.set)
-        evt.wait()
-        self.cleanup()
-
 
 
 class PowerConsumerRaspberry(PowerConsumerBase):
@@ -249,55 +152,3 @@ class PowerConsumerRaspberry(PowerConsumerBase):
 
     def cleanup(self):
         GPIO.cleanup()
-
-class PowerConsumerDummy(PowerConsumerBase):
-
-    def __init__(self):
-        # # wait for rpc call with parameters that set fields, create raiden app and initialise superclass constructor
-        # while not isinstance(RaidenApp, self.app):
-        #     gevent.sleep(1)
-        # self.api = self.raiden.api
-        # while not self.asset_address:
-        #     gevent.sleep(1)
-        # # everything set from super class, don't call super constructor anymore
-        # # super(PowerMeterDummy, self).__init__(raiden, self.price, self.asset_address, self.vendor_address):
-        # # make accessible via rpc for mock impulse events
-        # # self.event_callback = public(self.event_callback) # this shouldnt work like that!
-        # assert self.consumer_ready
-        # self.run()
-        pass
-
-    def setup_event(self, callback=None):
-        pass
-
-    @public
-    def run(self):
-        assert self.consumer_ready
-        # ofh = open(self.log_fn, 'a')
-        while True:
-            try:
-                time.sleep(1)
-                continue
-            # except RelayDeactivated:
-            #     self.wait_and_activate()
-            #     continue
-            except KeyboardInterrupt:
-                self.cleanup()
-                sys.exit()
-
-
-# def static_wsgi_app(environ, start_response):
-#     start_response("200 OK", [("Content-Type", "text/html")])
-#     return open("plot_graph.html").readlines()
-#
-#
-# resource = Resource([
-#     ('/', static_wsgi_app),
-#     ('/data', PlotApplication)
-# ])
-
-if __name__ == "__main__":
-    # server = WebSocketServer(('', 8000), resource, debug=True)
-    # server.serve_forever()
-	    pm = PowerMeter()
-	    pm.run()

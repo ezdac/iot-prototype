@@ -55,21 +55,24 @@ class PowerMeterBase(object):
     # log_fn = '/home/alarm/data/power.log'
     energy_per_impulse = 1/2000. #kwH
 
-    def __init__(self, raiden, initial_price, asset_address, partner_address):
+    def __init__(self, raiden,initial_price, asset_address, partner_address, ui_server):
         self.raiden = raiden
         self.api = raiden.api
         self.channel = None
+        # give channel in constructor FIXME
         while not self.channel:
             try:
                 asset_manager=raiden.get_manager_by_asset_address(decode_hex(asset_address))
                 self.channel = asset_manager.get_channel_by_partner_address(decode_hex(vendor_address))
             except Exception as e:
-                print e
+                # pass silently FIXME
         self.relay_active = False
         self.consumed_impulses = 1 # overhead that has to be prepaid
         self.price_per_kwh = float(initial_price)
         self.asset_address = asset_address
         self.partner_addres = partner_address
+        if ui_server:
+            self.ui_server = ui_server
         # self.grant = granted_overhead # TODO: implement merciful overhead
 
     @property
@@ -90,6 +93,8 @@ class PowerMeterBase(object):
         return self.credit - self.debit
 
     def add_impulse(self):
+        if self.ui_server:
+            requests.post(self.ui_server + '/power_tick')
         self.consumed_impulses += 1
 
      # GPIO has fixed callback argument channel
