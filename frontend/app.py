@@ -9,8 +9,10 @@ STATE = None
 app = Flask(__name__)
 
 
+@app.route("/init")
 @app.route("/init/<int:max_balance>")
-def init(max_balance):
+@app.route("/init/<int:max_balance>/<float:power_per_tick>/<float:tokens_per_tick>")
+def init(max_balance=100, power_per_tick=0.5, tokens_per_tick=1.0):
     global STATE
     STATE = {
         'max_balance': max_balance,
@@ -22,6 +24,10 @@ def init(max_balance):
         'power': {
             'seller': 0,
             'buyer': 0
+        },
+        'per_tick': {
+            'tokens': tokens_per_tick,
+            'power': power_per_tick
         },
         'log': []
     }
@@ -56,10 +62,10 @@ def index(kind='seller'):
 @app.route("/power_tick")
 def power_tick():
     if STATE['balances']['buyer-credit'] > 0:
-        STATE['power']['seller'] += 1
-        STATE['power']['buyer'] += 1
-        STATE['balances']['buyer-credit'] -= 1
-        STATE['balances']['seller'] += 1
+        STATE['power']['seller'] += STATE['per_tick']['power']
+        STATE['power']['buyer'] += STATE['per_tick']['power']
+        STATE['balances']['buyer-credit'] -= STATE['per_tick']['tokens']
+        STATE['balances']['seller'] += STATE['per_tick']['tokens']
         return "OK"
     return "Not OK"
 
