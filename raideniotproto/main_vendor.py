@@ -50,11 +50,14 @@ def main_new():
     registry_contract_address = '4fb87c52bb6d194f78cd4896e3e574028fedbab9'
     discovery_contract_address = 'ed8d61f42dc1e56ae992d333a4992c3796b22a74'
     token_address = 'ae519fc2ba8e6ffe6473195c092bf1bae986ff90'
+    token_address_bin = token_address.decode('hex')
     app = make_app(privatekey, DEFAULT_ETH_RPC_ENDPOINT, registry_contract_address,
         discovery_contract_address,'0.0.0.0:40001', '192.168.0.118:40001'
     )
     # register token once, if not registered already
-    app.raiden.chain.default_registry.add_asset(token_address)
+    registered_assets = app.raiden.chain.default_registry.asset_addresses()
+    if not token_address_bin in registered_assets:
+        app.raiden.chain.default_registry.add_asset(token_address)
     # wait for partner:
     partner = None
     while not partner:

@@ -65,16 +65,29 @@ def main_new():
     channel = None
     while not channel:
         try:
+            asset_manager=raiden.get_manager_by_asset_address(decode_hex(asset_address))
+            channel = asset_manager.get_channel_by_partner_address(decode_hex(partner_address))
+            # if found like that, channel is another object!
+        except Exception as e:
+            # no channel can be obtained
+            break
+    while not channel:
+        try:
             channel = app.raiden.api.open(token_address, partner)
         except JSONRPCClientReplyError:
             continue
+    print channel.proxy.addressAndBalance() # check for deposited balances
 
     # only deposit if not already deposited desired amount
+    # if channel isopen, obtain balance/deposit
+    # if not DEFAULT_DEPOSIT_AMOUNT == balance:
     try:
-        app.raiden.api.deposit(token_address, partner, amount=DEFAULT_DEPOSIT_AMOUNT)
-    except Exception:
+        deposit = app.raiden.api.deposit(token_address, partner, amount=DEFAULT_DEPOSIT_AMOUNT)
+    except Exception: # check for balance first
         print 'nothing deposited'
+        deposit = None
         pass
+    print deposit.proxy.addressAndBalance()
     powerconsumer = PowerConsumerRaspberry(app.raiden, 4000, token_address, partner, ui_server='http://192.168.0.72:8000')
     powerconsumer.run()
 

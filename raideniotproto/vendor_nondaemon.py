@@ -149,6 +149,8 @@ class PowerMeterBase(object):
 
     def run(self):
         # ofh = open(self.log_fn, 'a')
+        if not self.relay_active:
+            self.deactivate_relay()
         self.setup_event(callback=self.event_callback)
         # blocks until first transfer is received
         self.wait_and_activate()
