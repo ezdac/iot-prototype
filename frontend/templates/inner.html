@@ -1,10 +1,10 @@
         <div class="columns large-12">
             <h1>Raiden IOT electricity demo</h1>
-            {% if kind == 'seller' %}
+            {% if kind == 'producer' %}
                 <h2 class="subheader">{{ kind.title() }}</h2>
                 <p class="lead">
-                    The seller provides electricity to the buyer in exchange for tokens. <br>
-                    The electricity is switched on by the seller as long as the buyer has provided enough credit.
+                    The producer provides electricity to the consumer in exchange for tokens. <br>
+                    The electricity is switched on by the producer as long as the consumer has provided enough credit.
                 </p>
                 <div class="row">
                     <div class="columns medium-2">
@@ -21,7 +21,7 @@
                         <div class="stat">{{ power }} Wh</div>
                     </div>
                     <div class="columns medium-7">
-                        <p>Buyer credit</p>
+                        <p>Consumer credit</p>
                         <div class="progress" role="progressbar" tabindex="0">
                             <span class="progress-meter" style="width: {{ credit / (max_balance / 2) * 100 }}%">
                             </span>
@@ -42,7 +42,7 @@
             {% else %}
                 <h2 class="subheader">{{ kind.title() }}</h2>
                 <p class="lead">
-                    The buyer receives electricity from the seller in exchange for tokens.
+                    The consumer receives electricity from the producer in exchange for tokens.
                 </p>
                 <div class="row">
                     <div class="columns medium-3">
@@ -50,7 +50,7 @@
                         <div class="stat">{{ power }} Wh</div>
                     </div>
                     <div class="columns medium-9">
-                        <p>Tokens left</p>
+                        <p>Tokens available</p>
                         <div class="progress" role="progressbar" tabindex="0">
                             <span class="progress-meter" style="width: {{ balance / max_balance * 100 }}%">
                             </span>
@@ -63,7 +63,7 @@
             <h3>Transaction log</h3>
             <ul class="no-bullet log {{ kind }}">
                 {% for entry in log %}
-                    <li {% if now - entry.date < threshold %}class="new"{% endif %}>{{ entry.date.strftime("%Y-%m-%d %H:%M:%S") }}: <i class="fa {{ "fa-minus-circle" if kind == 'buyer' else 'fa-plus-circle' }}"></i> {{ 'Received' if kind == 'seller' else 'Sent' }} {{ entry.amount }} tokens</li>
+                    <li {% if now - entry.date < threshold %}class="new"{% endif %}>{{ entry.date.strftime("%Y-%m-%d %H:%M:%S") }}: <i class="fa {{ "fa-minus-circle" if kind == 'consumer' else 'fa-plus-circle' }}"></i> {{ 'Received' if kind == 'producer' else 'Sent' }} {{ entry.amount }} tokens</li>
                 {% endfor %}
             </ul>
         </div>
