@@ -55,7 +55,7 @@ def index(kind='seller'):
         credit=credit,
         max_balance=STATE['max_balance'],
         power=STATE['power'][kind],
-        log=STATE['log']
+        log=list(reversed(STATE['log']))[:10],
     )
 
 

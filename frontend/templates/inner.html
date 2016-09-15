@@ -62,8 +62,8 @@
             <br>
             <h3>Transaction log</h3>
             <ul class="no-bullet log {{ kind }}">
-                {% for entry in log[-10:] %}
                     <li>{{ entry.date.strftime("%Y-%m-%d %H:%M:%S") }}: <i class="fa {{ "fa-minus-circle" if kind == 'buyer' else 'fa-plus-circle' }}"></i> {{ 'Received' if kind == 'seller' else 'Sent' }} {{ entry.amount }} tokens</li>
+                {% for entry in log %}
                 {% endfor %}
             </ul>
         </div>
