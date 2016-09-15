@@ -1,4 +1,4 @@
-        <div class="columns large-12">
+        <div class="columns large-12 {{ kind }}">
             <h1>Raiden IOT electricity demo</h1>
             {% if kind == 'producer' %}
                 <h2 class="subheader">{{ kind.title() }}</h2>
@@ -61,7 +61,7 @@
             {% endif %}
             <br>
             <h3>Transaction log</h3>
-            <ul class="no-bullet log {{ kind }}">
+            <ul class="no-bullet log">
                 {% for entry in log %}
                     <li {% if now - entry.date < threshold %}class="new"{% endif %}>{{ entry.date.strftime("%Y-%m-%d %H:%M:%S") }}: <i class="fa {{ "fa-minus-circle" if kind == 'consumer' else 'fa-plus-circle' }}"></i> {{ 'Received' if kind == 'producer' else 'Sent' }} {{ entry.amount }} tokens</li>
                 {% endfor %}
