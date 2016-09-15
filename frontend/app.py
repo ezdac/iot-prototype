@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import Flask, render_template, abort
 from flask.globals import request
@@ -56,6 +56,8 @@ def index(kind='seller'):
         max_balance=STATE['max_balance'],
         power=STATE['power'][kind],
         log=list(reversed(STATE['log']))[:10],
+        now=datetime.now(),
+        threshold=timedelta(seconds=1)
     )
 
 
